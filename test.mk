@@ -1,6 +1,10 @@
 # Makefile para pruebas
 TEST_COMPOSE = docker compose -f docker-compose.test.yml -p flow-wallet-api-test
 
+# Cargar variables de entorno desde .env
+include .env
+export
+
 .PHONY: test-setup
 test-setup:
 	@echo "Configurando entorno de pruebas..."
@@ -18,7 +22,7 @@ test-wait:
 .PHONY: test-run
 test-run:
 	@echo "Ejecutando pruebas..."
-	@echo "NOTA: Para ejecutar las pruebas, abre el archivo test-suite/run-tests.http en un cliente HTTP como REST Client para VSCode"
+	@echo "NOTA: Para ejecutar las pruebas HTTP, abre el archivo test-suite/run-tests.http en un cliente HTTP como REST Client para VSCode"
 	@echo "O ejecuta manualmente los archivos .http con un cliente como Insomnia o Postman"
 	@echo "Servicios corriendo en:"
 	@echo "  API: http://localhost:3001/v1"
@@ -42,4 +46,38 @@ test: test-setup test-wait test-run
 .PHONY: test-full
 test-full: test
 	@echo "Pruebas completadas. Limpiando entorno..."
-	@$(TEST_COMPOSE) down -v 
+	@$(TEST_COMPOSE) down -v
+
+# Comandos para pruebas de integración en Go
+.PHONY: test-go
+test-go:
+	@echo "Ejecutando pruebas de integración en Go..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v
+
+.PHONY: test-go-health
+test-go-health:
+	@echo "Ejecutando pruebas de salud..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestHealthCheck
+
+.PHONY: test-go-accounts
+test-go-accounts:
+	@echo "Ejecutando pruebas de cuentas..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestAccountsFlow
+
+.PHONY: test-go-scripts
+test-go-scripts:
+	@echo "Ejecutando pruebas de scripts..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestScripts
+
+.PHONY: test-go-tokens
+test-go-tokens:
+	@echo "Ejecutando pruebas de tokens..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestTokens
+
+.PHONY: test-integration
+test-integration: test-setup test-wait test-go
+	@echo "Pruebas de integración completadas."
+
+.PHONY: test-integration-full
+test-integration-full: test-setup test-wait test-go test-clean
+	@echo "Pruebas de integración completadas y entorno limpiado." 
