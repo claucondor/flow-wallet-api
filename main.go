@@ -232,6 +232,11 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
+
+		// Endpoints adicionales para compatibilidad con las pruebas de integración
+		rv.Handle("/accounts/{address}/tokens/{token}", tokenHandler.Setup()).Methods(http.MethodPost)
+		rv.Handle("/accounts/{address}/tokens/{token}/balance", tokenHandler.TokenBalance()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/tokens/{token}/transfer", tokenHandler.TokenTransfer()).Methods(http.MethodPost)
 	} else {
 		log.Info("fungible tokens disabled")
 	}

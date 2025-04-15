@@ -53,3 +53,13 @@ func (s *Tokens) GetDeposit() http.Handler {
 	h := http.HandlerFunc(s.GetDepositFunc)
 	return h
 }
+
+func (s *Tokens) TokenBalance() http.Handler {
+	h := http.HandlerFunc(s.TokenBalanceFunc)
+	return h
+}
+
+func (s *Tokens) TokenTransfer() http.Handler {
+	h := http.HandlerFunc(s.TokenTransferFunc)
+	return UseJson(h)
+}

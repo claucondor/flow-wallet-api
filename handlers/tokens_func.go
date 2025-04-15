@@ -168,3 +168,57 @@ func (s *Tokens) GetDepositFunc(rw http.ResponseWriter, r *http.Request) {
 
 	handleJsonResponse(rw, http.StatusOK, res)
 }
+
+// TokenBalanceFunc maneja la solicitud de balance de un token
+func (s *Tokens) TokenBalanceFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	tokenName := vars["token"]
+
+	res, err := s.service.Details(r.Context(), tokenName, address)
+
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, res)
+}
+
+// TokenTransferFunc maneja la solicitud de transferencia de un token
+func (s *Tokens) TokenTransferFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	tokenName := vars["token"]
+
+	var transferRequest tokens.WithdrawalRequest
+	err := json.NewDecoder(r.Body).Decode(&transferRequest)
+	if err != nil {
+		handleError(rw, r, &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("invalid body: %w", err),
+		})
+		return
+	}
+
+	// Añadir el nombre del token a la solicitud
+	transferRequest.TokenName = tokenName
+
+	// Decidir si la operación es sincrónica o asincrónica
+	sync := r.FormValue(SyncQueryParameter) != ""
+	job, transaction, err := s.service.CreateWithdrawal(r.Context(), sync, address, transferRequest)
+
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	var res interface{}
+	if sync {
+		res = transaction.ToJSONResponse()
+	} else {
+		res = job.ToJSONResponse()
+	}
+
+	handleJsonResponse(rw, http.StatusCreated, res)
+}
