@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Tokens) SetupFunc(rw http.ResponseWriter, r *http.Request) {
@@ -226,8 +229,11 @@ func (s *Tokens) TokenTransferFunc(rw http.ResponseWriter, r *http.Request) {
 // DeployTokenFunc maneja la solicitud para desplegar un contrato de token
 func (s *Tokens) DeployTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	var req struct {
-		TokenName string `json:"tokenName"` // Nombre del token a desplegar
-		Address   string `json:"address"`   // Dirección de la cuenta donde se desplegará
+		TokenName         string            `json:"tokenName"`         // Nombre del token a desplegar
+		Address           string            `json:"address"`           // Dirección de la cuenta donde se desplegará
+		DeployBasicDeps   bool              `json:"deployBasicDeps"`   // Si es true, despliega FungibleToken antes
+		DeployCustomDeps  []string          `json:"deployCustomDeps"`  // Lista de tokens adicionales a desplegar antes
+		ContractAddresses map[string]string `json:"contractAddresses"` // Mapa de direcciones de contratos base
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -258,7 +264,58 @@ func (s *Tokens) DeployTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	// Decidir si la operación es sincrónica o asincrónica
 	sync := r.FormValue(SyncQueryParameter) != ""
 
-	// Usar el método DeployTokenContractForAccount para desplegar el token
+	// Configurar variables de entorno temporales con las direcciones de los contratos
+	if req.ContractAddresses != nil {
+		for k, v := range req.ContractAddresses {
+			envVarName := fmt.Sprintf("FLOW_WALLET_%s_ADDRESS", strings.ToUpper(k))
+			oldValue := os.Getenv(envVarName)
+			os.Setenv(envVarName, v)
+			defer os.Setenv(envVarName, oldValue) // Restaurar valor original al finalizar
+
+			logrus.WithFields(logrus.Fields{
+				"contract": k,
+				"address":  v,
+				"envVar":   envVarName,
+			}).Info("Configurando dirección de contrato")
+		}
+	}
+
+	// Primero desplegar las dependencias básicas si se solicita
+	if req.DeployBasicDeps {
+		// Intenta desplegar FungibleToken primero
+		err = s.service.DeployTokenContractForAccount(r.Context(), sync, "FungibleToken", req.Address)
+		if err != nil {
+			// Solo reportar, no fallar
+			logrus.WithFields(logrus.Fields{
+				"error": err,
+				"token": "FungibleToken",
+			}).Warn("Error al desplegar dependencia básica")
+		}
+
+		// Intenta desplegar FlowToken después
+		err = s.service.DeployTokenContractForAccount(r.Context(), sync, "FlowToken", req.Address)
+		if err != nil {
+			// Solo reportar, no fallar
+			logrus.WithFields(logrus.Fields{
+				"error": err,
+				"token": "FlowToken",
+			}).Warn("Error al desplegar dependencia básica")
+		}
+	}
+
+	// Desplegar dependencias personalizadas si se especifican
+	for _, depToken := range req.DeployCustomDeps {
+		err = s.service.DeployTokenContractForAccount(r.Context(), sync, depToken, req.Address)
+		if err != nil {
+			// Solo reportar, no fallar
+			logrus.WithFields(logrus.Fields{
+				"error": err,
+				"token": depToken,
+			}).Warn("Error al desplegar dependencia personalizada")
+		}
+	}
+
+	// Finalmente, desplegar el token principal
 	err = s.service.DeployTokenContractForAccount(r.Context(), sync, req.TokenName, req.Address)
 	if err != nil {
 		handleError(rw, r, err)

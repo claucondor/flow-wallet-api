@@ -48,7 +48,8 @@ func TestTokenOperations(t *testing.T) {
 		t.Skip("No se pudo crear la cuenta de prueba, omitiendo pruebas de tokens")
 	}
 
-	// Desplegar el contrato FUSD
+	// Desplegar el contrato FUSD en la cuenta de administrador
+	// Esto usa nuestro endpoint personalizado para desplegar el contrato FUSD
 	t.Run("Deploy FUSD Token", func(t *testing.T) {
 		adminAddress := os.Getenv("FLOW_WALLET_ADMIN_ADDRESS")
 		if adminAddress == "" {
@@ -56,9 +57,27 @@ func TestTokenOperations(t *testing.T) {
 			return
 		}
 
+		// Obtener las direcciones de los contratos base del environment
+		fungibleTokenAddress := os.Getenv("FLOW_WALLET_FUNGIBLE_TOKEN_ADDRESS")
+		if fungibleTokenAddress == "" {
+			fungibleTokenAddress = "0xee82856bf20e2aa6" // Dirección estándar en emulador
+		}
+
+		flowTokenAddress := os.Getenv("FLOW_WALLET_FLOW_TOKEN_ADDRESS")
+		if flowTokenAddress == "" {
+			flowTokenAddress = "0x0ae53cb6e3f42a79" // Dirección estándar en emulador
+		}
+
+		// Solicitud para desplegar el contrato FUSD con referencias a los contratos base
 		deployRequest := map[string]interface{}{
-			"tokenName": "FUSD",
-			"address":   adminAddress,
+			"tokenName":        "FUSD",
+			"address":          adminAddress,
+			"deployBasicDeps":  false,      // No es necesario, ya que están en el emulador
+			"deployCustomDeps": []string{}, // No hay dependencias adicionales
+			"contractAddresses": map[string]string{
+				"FungibleToken": fungibleTokenAddress,
+				"FlowToken":     flowTokenAddress,
+			},
 		}
 
 		headers := map[string]string{

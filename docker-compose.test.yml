@@ -51,11 +51,11 @@ services:
 
   test-emulator:
     image: gcr.io/flow-container-registry/emulator:latest
-    command: emulator --persist --host 0.0.0.0
+    command: emulator --persist --host 0.0.0.0 --init-accounts --contracts
     volumes:
       - test-emulator-persist:/flowdb
     env_file:
-      - ./.env
+      - ./.env.test
     ports:
       - "3570:3569"
     environment:
@@ -77,14 +77,7 @@ services:
     ports:
       - "3001:3000"
     env_file:
-      - ./.env
-    environment:
-      FLOW_WALLET_DATABASE_DSN: postgresql://wallet_test:wallet_test@test-db:5432/wallet_test
-      FLOW_WALLET_DATABASE_TYPE: psql
-      FLOW_WALLET_ACCESS_API_HOST: test-emulator:3569
-      FLOW_WALLET_CHAIN_ID: flow-emulator
-      FLOW_WALLET_LOG_LEVEL: info
-      FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_REDIS_URL: redis://walletapi:wallet-api-redis@test-redis:6379/
+      - ./.env.test
     depends_on:
       test-db:
         condition: service_healthy
