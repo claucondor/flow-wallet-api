@@ -47,7 +47,7 @@ services:
 
   emulator:
     image: gcr.io/flow-container-registry/emulator:latest
-    command: emulator --persist
+    command: emulator --persist --host 0.0.0.0
     volumes:
       - emulator-persist:/flowdb
     env_file:
@@ -79,6 +79,7 @@ services:
       FLOW_WALLET_DATABASE_TYPE: psql
       FLOW_WALLET_ACCESS_API_HOST: emulator:3569
       FLOW_WALLET_CHAIN_ID: flow-emulator
+      FLOW_WALLET_LOG_LEVEL: info
     depends_on:
       db:
         condition: service_healthy

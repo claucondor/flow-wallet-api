@@ -91,7 +91,7 @@ func Test_TransactionProposalKeySequenceNumber(t *testing.T) {
 
 		ctx := context.Background()
 
-		_, tx, err := txSvc.Create(ctx, false, cfg.AdminAddress, "transaction() { prepare(signer: AuthAccount){} execute {}}", nil, transactions.General)
+		_, tx, err := txSvc.Create(ctx, false, cfg.AdminAddress, "transaction() { prepare(signer: auth(Storage) &Account){} execute {}}", nil, transactions.General)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -129,12 +129,12 @@ func Test_TransactionProposalKeySequenceNumber(t *testing.T) {
 
 		ctx := context.Background()
 
-		job1, tx1, err := txSvc.Create(ctx, false, cfg.AdminAddress, "transaction() { prepare(signer: AuthAccount){} execute {}}", nil, transactions.General)
+		job1, tx1, err := txSvc.Create(ctx, false, cfg.AdminAddress, "transaction() { prepare(signer: auth(Storage) &Account){} execute {}}", nil, transactions.General)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		job2, tx2, err := txSvc.Create(ctx, false, cfg.AdminAddress, "transaction() { prepare(signer: AuthAccount){} execute {}}", nil, transactions.General)
+		job2, tx2, err := txSvc.Create(ctx, false, cfg.AdminAddress, "transaction() { prepare(signer: auth(Storage) &Account){} execute {}}", nil, transactions.General)
 		if err != nil {
 			t.Fatal(err)
 		}

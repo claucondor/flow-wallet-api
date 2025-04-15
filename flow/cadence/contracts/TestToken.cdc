@@ -208,32 +208,32 @@ access(all) contract TestToken: FungibleToken {
         }
     }
 
-    init(adminAccount: AuthAccount) {
+    init(adminAccount: auth(Storage, Keys, Capabilities) &Account) {
         self.totalSupply = 0.0
 
         // Create the Vault with the total supply of tokens and save it in storage
         //
         let vault <- create Vault(balance: self.totalSupply)
-        adminAccount.save(<-vault, to: /storage/testTokenVault)
+        adminAccount.storage.save(<-vault, to: /storage/testTokenVault)
 
         // Create a public capability to the stored Vault that only exposes
         // the `deposit` method through the `Receiver` interface
         //
-        adminAccount.link<&TestToken.Vault{FungibleToken.Receiver}>(
-            /public/testTokenReceiver,
-            target: /storage/testTokenVault
+        let receiverCap = adminAccount.capabilities.storage.issue<&TestToken.Vault{FungibleToken.Receiver}>(
+            /storage/testTokenVault
         )
+        adminAccount.capabilities.publish(receiverCap, at: /public/testTokenReceiver)
 
         // Create a public capability to the stored Vault that only exposes
         // the `balance` field through the `Balance` interface
         //
-        adminAccount.link<&TestToken.Vault{FungibleToken.Balance}>(
-            /public/testTokenBalance,
-            target: /storage/testTokenVault
+        let balanceCap = adminAccount.capabilities.storage.issue<&TestToken.Vault{FungibleToken.Balance}>(
+            /storage/testTokenVault
         )
+        adminAccount.capabilities.publish(balanceCap, at: /public/testTokenBalance)
 
         let admin <- create Administrator()
-        adminAccount.save(<-admin, to: /storage/testTokenAdmin)
+        adminAccount.storage.save(<-admin, to: /storage/testTokenAdmin)
 
         // Emit an event that shows that the contract was initialized
         emit TokensInitialized(initialSupply: self.totalSupply)

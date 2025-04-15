@@ -34,7 +34,7 @@ import {{ .ContractName }} from {{ .Address }}
 {{ end }}
 
 transaction(publicKeys: [Crypto.KeyListEntry]) {
-	prepare(signer: auth(CreateAccount, Storage, Capabilities) &Account) {
+	prepare(signer: auth(Storage, Keys, Capabilities) &Account) {
 		let account = Account(payer: signer)
 
 		// add all the keys to the account
@@ -66,23 +66,21 @@ import FungibleToken from {{ .FungibleTokenContractAddress }}
 import {{ .ContractName }} from {{ .Address }}
 {{ end }}
 
-transaction() {
-	prepare(account: auth(Storage, Capabilities) &Account) {
+transaction {
+	prepare(account: auth(Storage, Keys, Capabilities) &Account) {
 		{{ range .Tokens }}
 		// initializing vault for {{ .ContractName }}
-		if account.storage.borrow<&{{ .ContractName }}.Vault>(from: {{ .VaultStoragePath }}) == nil {
-			account.storage.save(<-{{ .ContractName }}.createEmptyVault(), to: {{ .VaultStoragePath }})
-			
-			let receiverCap = account.capabilities.storage.issue<&{{ .ContractName }}.Vault{FungibleToken.Receiver}>(
-				{{ .VaultStoragePath }}
-			)
-			account.capabilities.publish(receiverCap, at: {{ .ReceiverPublicPath }})
-			
-			let balanceCap = account.capabilities.storage.issue<&{{ .ContractName }}.Vault{FungibleToken.Balance}>(
-				{{ .VaultStoragePath }}
-			)
-			account.capabilities.publish(balanceCap, at: {{ .BalancePublicPath }})
-		}
+		account.storage.save(<-{{ .ContractName }}.createEmptyVault(), to: {{ .VaultStoragePath }})
+		
+		let receiverCap = account.capabilities.storage.issue<&{{ .ContractName }}.Vault{FungibleToken.Receiver}>(
+			{{ .VaultStoragePath }}
+		)
+		account.capabilities.publish(receiverCap, at: {{ .ReceiverPublicPath }})
+		
+		let balanceCap = account.capabilities.storage.issue<&{{ .ContractName }}.Vault{FungibleToken.Balance}>(
+			{{ .VaultStoragePath }}
+		)
+		account.capabilities.publish(balanceCap, at: {{ .BalancePublicPath }})
 		{{ end }}
 	}
 }

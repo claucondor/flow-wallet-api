@@ -39,7 +39,7 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 	fromJsonBody(t, res, &account)
 
 	// Transaction:
-	code := "transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}"
+	code := "transaction(greeting: String) { prepare(signer: auth(Storage) &Account){} execute { log(greeting.concat(\", World!\")) }}"
 	args := "[{\"type\":\"String\",\"value\":\"Hello\"}]"
 
 	// Sign it.
