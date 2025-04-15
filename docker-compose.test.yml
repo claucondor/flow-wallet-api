@@ -51,7 +51,7 @@ services:
 
   test-emulator:
     image: gcr.io/flow-container-registry/emulator:latest
-    command: emulator --persist --host 0.0.0.0 --init-accounts --contracts
+    command: emulator --persist --host 0.0.0.0 --contracts
     volumes:
       - test-emulator-persist:/flowdb
     env_file:
