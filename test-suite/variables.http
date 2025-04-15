@@ -1,0 +1,20 @@
+@baseUrl = http://localhost:3001/v1
+@adminAddress = {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}
+@testAccount = 0x0000000000000000
+@emulatorCustodyAccount = 0x0000000000000000
+
+# Variables para pruebas FT
+@flowTokenName = FlowToken
+@fusdTokenName = FUSD
+
+# Variables para pruebas NFT
+@exampleNFTName = ExampleNFT
+
+# Estas variables se actualizarán durante las pruebas
+@createdAccountAddress = 0x0000000000000000
+@jobId = 00000000-0000-0000-0000-000000000000
+@transactionId = 0000000000000000000000000000000000000000000000000000000000000000
+@nftId = 0
+
+# Función para generar un idempotency key único
+@idempotencyKey = {{$guid}} 

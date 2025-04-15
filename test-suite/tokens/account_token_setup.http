@@ -1,0 +1,26 @@
+# Configurar tokens para una cuenta
+
+@import ../variables.http
+
+### Configurar FlowToken para la cuenta creada
+POST {{baseUrl}}/accounts/{{createdAccountAddress}}/fungible-tokens/{{flowTokenName}}
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+### Configurar FUSD para la cuenta creada
+POST {{baseUrl}}/accounts/{{createdAccountAddress}}/fungible-tokens/{{fusdTokenName}}
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+### Configurar ExampleNFT para la cuenta creada
+POST {{baseUrl}}/accounts/{{createdAccountAddress}}/non-fungible-tokens/{{exampleNFTName}}
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+### Listar tokens fungibles habilitados para la cuenta
+GET {{baseUrl}}/accounts/{{createdAccountAddress}}/fungible-tokens
+content-type: application/json
+
+### Listar tokens no fungibles habilitados para la cuenta
+GET {{baseUrl}}/accounts/{{createdAccountAddress}}/non-fungible-tokens
+content-type: application/json 

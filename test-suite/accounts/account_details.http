@@ -1,0 +1,12 @@
+# Obtener detalles de cuentas
+
+@import ../variables.http
+
+### Obtener detalles de la cuenta de admin
+GET {{baseUrl}}/accounts/{{adminAddress}}
+content-type: application/json
+
+### Obtener detalles de la cuenta creada
+# Nota: Esta prueba depende de haber ejecutado account_create.http primero
+GET {{baseUrl}}/accounts/{{createdAccountAddress}}
+content-type: application/json 

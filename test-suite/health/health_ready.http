@@ -1,0 +1,7 @@
+# Verificación de endpoint ready
+# Este endpoint debe responder con 200 OK cuando el servicio está en funcionamiento
+
+@import ../variables.http
+
+### Healthcheck Ready
+GET {{baseUrl}}/health/ready 

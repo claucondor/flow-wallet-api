@@ -1,0 +1,37 @@
+# Enviar transacciones raw desde una cuenta
+
+@import ../variables.http
+
+### Enviar una transacción raw desde la cuenta admin
+POST {{baseUrl}}/accounts/{{adminAddress}}/transactions
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+{
+  "code": "transaction { prepare(signer: AuthAccount) { log(\"Hola mundo desde una transacción raw\") } }",
+  "arguments": []
+}
+
+### Guardar el ID del job
+@jobId = {{response.body.jobId}}
+
+### Verificar el estado del job
+GET {{baseUrl}}/jobs/{{jobId}}
+content-type: application/json
+
+### Enviar una transacción raw de forma síncrona
+POST {{baseUrl}}/accounts/{{adminAddress}}/transactions?sync=true
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+{
+  "code": "transaction { prepare(signer: AuthAccount) { log(\"Hola mundo desde una transacción raw síncrona\") } }",
+  "arguments": []
+}
+
+### Guardar el ID de la transacción
+@transactionId = {{response.body.transactionId}}
+
+### Obtener detalles de la transacción
+GET {{baseUrl}}/accounts/{{adminAddress}}/transactions/{{transactionId}}
+content-type: application/json 

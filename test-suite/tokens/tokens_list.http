@@ -1,0 +1,15 @@
+# Listar tokens habilitados en el sistema
+
+@import ../variables.http
+
+### Listar todos los tokens (fungibles y no fungibles)
+GET {{baseUrl}}/tokens
+content-type: application/json
+
+### Listar tokens fungibles
+GET {{baseUrl}}/fungible-tokens
+content-type: application/json
+
+### Listar tokens no fungibles
+GET {{baseUrl}}/non-fungible-tokens
+content-type: application/json 

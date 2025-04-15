@@ -1,0 +1,11 @@
+# Listar cuentas gestionadas por el servicio
+
+@import ../variables.http
+
+### Listar todas las cuentas
+GET {{baseUrl}}/accounts
+content-type: application/json
+
+### Listar cuentas con límite y offset
+GET {{baseUrl}}/accounts?limit=5&offset=0
+content-type: application/json 

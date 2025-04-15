@@ -1,0 +1,38 @@
+# Transferencias de tokens entre cuentas
+
+@import ../variables.http
+
+### Transferir FlowToken desde admin a la cuenta creada
+POST {{baseUrl}}/accounts/{{adminAddress}}/fungible-tokens/{{flowTokenName}}/withdrawals
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+{
+  "recipient": "{{createdAccountAddress}}",
+  "amount": "10.0"
+}
+
+### Guardar el ID de la transacción
+@transactionId = {{response.body.transactionId}}
+
+### Verificar los detalles de la transacción
+GET {{baseUrl}}/accounts/{{adminAddress}}/fungible-tokens/{{flowTokenName}}/withdrawals/{{transactionId}}
+content-type: application/json
+
+### Transferir FUSD desde admin a la cuenta creada
+POST {{baseUrl}}/accounts/{{adminAddress}}/fungible-tokens/{{fusdTokenName}}/withdrawals
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+{
+  "recipient": "{{createdAccountAddress}}",
+  "amount": "5.0"
+}
+
+### Listar withdrawals de FlowToken
+GET {{baseUrl}}/accounts/{{adminAddress}}/fungible-tokens/{{flowTokenName}}/withdrawals
+content-type: application/json
+
+### Listar depósitos de FlowToken en la cuenta creada
+GET {{baseUrl}}/accounts/{{createdAccountAddress}}/fungible-tokens/{{flowTokenName}}/deposits
+content-type: application/json 

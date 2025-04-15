@@ -1,0 +1,26 @@
+# Ejecutar scripts en la blockchain
+
+@import ../variables.http
+
+### Ejecutar un script simple
+POST {{baseUrl}}/scripts
+content-type: application/json
+
+{
+  "code": "pub fun main(): Int { return 42 }",
+  "arguments": []
+}
+
+### Ejecutar un script para obtener el balance de FlowToken
+POST {{baseUrl}}/scripts
+content-type: application/json
+
+{
+  "code": "import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\n\npub fun main(address: Address): UFix64 {\n    let account = getAccount(address)\n    let vaultRef = account.getCapability(/public/flowTokenBalance)\n        .borrow<&FlowToken.Vault{FungibleToken.Balance}>() ?? panic(\"Could not borrow Balance reference to the Vault\")\n    return vaultRef.balance\n}",
+  "arguments": [
+    {
+      "type": "Address",
+      "value": "{{createdAccountAddress}}"
+    }
+  ]
+} 

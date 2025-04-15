@@ -2,8 +2,8 @@ ifeq (, $(shell which flow))
 $(error "No flow in PATH")
 endif
 
-ifeq (, $(shell which docker-compose))
-$(error "No docker-compose in PATH")
+ifeq (, $(shell which docker))
+$(error "No docker in PATH")
 endif
 
 ifeq (, $(shell which go))
@@ -11,8 +11,8 @@ $(error "No go in PATH")
 endif
 
 
-dev = docker-compose -f docker-compose.dev.yml -p flow-wallet-api-dev
-test-suite = docker-compose -f docker-compose.test-suite.yml -p flow-wallet-api-test
+dev = docker compose -f docker-compose.dev.yml -p flow-wallet-api-dev
+test-suite = docker compose -f docker-compose.test-suite.yml -p flow-wallet-api-test
 
 .PHONY: dev
 dev:

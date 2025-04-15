@@ -1,0 +1,21 @@
+# Habilitar un nuevo token en el sistema
+
+@import ../variables.http
+
+### Habilitar un token no fungible de ejemplo (ExampleNFT)
+POST {{baseUrl}}/tokens
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+{
+  "name":"{{exampleNFTName}}",
+  "address":"{{adminAddress}}",
+  "type":"NFT",
+  "setup":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction {\n    prepare(signer: AuthAccount) {\n        if signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath) != nil { return }\n        let collection <- ExampleNFT.createEmptyCollection()\n        signer.save(<-collection, to: ExampleNFT.CollectionStoragePath)\n        signer.link<&NonFungibleToken.Collection>(ExampleNFT.CollectionPublicPath, target: ExampleNFT.CollectionStoragePath)\n    }\n}\n",
+  "transfer":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction(recipient: Address, withdrawID: UInt64) {\n    prepare(signer: AuthAccount) {\n        let recipient = getAccount(recipient)\n        let collectionRef = signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath)!\n        let depositRef = recipient.getCapability(ExampleNFT.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()!\n        let nft <- collectionRef.withdraw(withdrawID: withdrawID)\n        depositRef.deposit(token: <-nft)\n    }\n}\n",
+  "balance": "import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\npub fun main(account: Address): [UInt64] {\n    let receiver = getAccount(account).getCapability(ExampleNFT.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()!\n    return receiver.getIDs()\n}\n"
+}
+
+### Verificar si el token fue habilitado
+GET {{baseUrl}}/non-fungible-tokens
+content-type: application/json 

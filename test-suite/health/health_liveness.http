@@ -1,0 +1,7 @@
+# Verificación de endpoint liveness
+# Este endpoint devuelve estadísticas básicas del sistema de trabajos
+
+@import ../variables.http
+
+### Healthcheck Liveness
+GET {{baseUrl}}/health/liveness 

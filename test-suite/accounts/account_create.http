@@ -1,0 +1,25 @@
+# Crear nuevas cuentas (asíncrono y síncrono)
+
+@import ../variables.http
+
+### Crear una nueva cuenta (asíncrono)
+# Esta operación devuelve un job que debe completarse
+POST {{baseUrl}}/accounts
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+### Guardar el jobId para verificar después
+@jobId = {{response.body.jobId}}
+
+### Verificar el estado del job
+GET {{baseUrl}}/jobs/{{jobId}}
+content-type: application/json
+
+### Crear una nueva cuenta (síncrono)
+# Esta operación es bloqueante y devuelve directamente la cuenta creada
+POST {{baseUrl}}/accounts?sync=true
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+### Guardar la dirección de la cuenta creada
+@createdAccountAddress = {{response.body.address}} 

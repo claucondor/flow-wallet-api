@@ -1,0 +1,30 @@
+# Verificación y modificación de configuración del sistema
+
+@import ../variables.http
+
+### Obtener configuración del sistema
+GET {{baseUrl}}/system/settings
+
+### Activar modo mantenimiento
+POST {{baseUrl}}/system/settings
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+{
+  "maintenanceMode": true
+}
+
+### Verificar que el modo mantenimiento está activado
+GET {{baseUrl}}/system/settings
+
+### Desactivar modo mantenimiento
+POST {{baseUrl}}/system/settings
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+{
+  "maintenanceMode": false
+}
+
+### Verificar que el modo mantenimiento está desactivado
+GET {{baseUrl}}/system/settings 

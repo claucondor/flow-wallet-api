@@ -1,0 +1,75 @@
+# Flow Wallet API Test Suite
+
+# Variables para las pruebas
+@baseUrl = http://localhost:3001/v1
+@adminAddress = {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}
+@testAccount = 0x0000000000000000
+@emulatorCustodyAccount = 0x0000000000000000
+@flowTokenName = FlowToken
+@fusdTokenName = FUSD
+@exampleNFTName = ExampleNFT
+@createdAccountAddress = 0x0000000000000000
+@jobId = 00000000-0000-0000-0000-000000000000
+@transactionId = 0000000000000000000000000000000000000000000000000000000000000000
+@nftId = 0
+@idempotencyKey = {{$guid}}
+
+### 1. Health Ready
+GET {{baseUrl}}/health/ready
+
+### 2. Health Liveness
+GET {{baseUrl}}/health/liveness
+
+### 3. System Settings
+GET {{baseUrl}}/system/settings
+
+### 4. Listar cuentas
+GET {{baseUrl}}/accounts
+content-type: application/json
+
+### 5. Crear una cuenta (asíncrono)
+POST {{baseUrl}}/accounts
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+### 6. Verificar estado del job
+# Primero actualiza manualmente la variable @jobId con el valor de la respuesta anterior
+GET {{baseUrl}}/jobs/{{jobId}}
+content-type: application/json
+
+### 7. Crear una cuenta (síncrono)
+POST {{baseUrl}}/accounts?sync=true
+content-type: application/json
+Idempotency-Key: {{idempotencyKey}}
+
+### 8. Obtener detalles de la cuenta creada
+# Primero actualiza manualmente la variable @createdAccountAddress con el valor de la respuesta anterior
+GET {{baseUrl}}/accounts/{{createdAccountAddress}}
+content-type: application/json
+
+### 9. Listar tokens
+GET {{baseUrl}}/tokens
+content-type: application/json
+
+### 10. Listar tokens fungibles
+GET {{baseUrl}}/fungible-tokens
+content-type: application/json
+
+### 11. Listar tokens no fungibles
+GET {{baseUrl}}/non-fungible-tokens
+content-type: application/json
+
+### 12. Ejecutar un script simple
+POST {{baseUrl}}/scripts
+content-type: application/json
+
+{
+  "code": "pub fun main(): Int { return 42 }",
+  "arguments": []
+}
+
+# Nota: Para actualizar variables entre peticiones en REST Client:
+# 1. Ejecuta una petición
+# 2. Copia el valor que necesitas de la respuesta (ejemplo: el jobId)
+# 3. Actualiza manualmente la variable correspondiente
+# 4. Continúa con la siguiente petición 

@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   db:
     image: postgres:13-alpine
@@ -20,12 +19,12 @@ services:
     build:
       context: ./docker/flow-cli
       args:
-        FLOW_CLI_VERSION: v0.28.3
+        FLOW_CLI_VERSION: v0.41.2
     entrypoint: ["/bin/sh","-c"]
     command:
        - |
-        flow emulator -b 100ms --persist &
-        sleep 1
+        flow emulator -b 100ms --persist --host 0.0.0.0 &
+        sleep 5
         flow project deploy --network=emulator --update=true
         tail -F anything
     environment:

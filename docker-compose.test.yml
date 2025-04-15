@@ -1,0 +1,94 @@
+version: "3.9"
+
+networks:
+ test-network:
+
+volumes:
+  test-emulator-persist:
+  test-go-modules:
+  test-go-cache:
+
+services:
+  test-db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: wallet_test
+      POSTGRES_USER: wallet_test
+      POSTGRES_PASSWORD: wallet_test
+    networks:
+      - test-network
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready --username=${POSTGRES_USER:-wallet_test} --dbname=${POSTGRES_DB:-wallet_test}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  test-redis:
+    image: redis:6.2-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf --loglevel warning
+    volumes:
+      - ./redis-config/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-config/users.acl:/usr/local/etc/redis/users.acl
+    networks:
+      - test-network
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "redis-cli ping",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  test-emulator:
+    image: gcr.io/flow-container-registry/emulator:latest
+    command: emulator --persist --host 0.0.0.0
+    volumes:
+      - test-emulator-persist:/flowdb
+    env_file:
+      - ./.env
+    ports:
+      - "3570:3569"
+    environment:
+      FLOW_SERVICEPRIVATEKEY: ${FLOW_WALLET_ADMIN_PRIVATE_KEY}
+      FLOW_SERVICEKEYSIGALGO: ECDSA_P256
+      FLOW_SERVICEKEYHASHALGO: SHA3_256
+      FLOW_DBPATH: /flowdb
+    networks:
+      - test-network
+
+  test-api:
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
+      target: dist
+      network: host
+    networks:
+      - test-network
+    ports:
+      - "3001:3000"
+    env_file:
+      - ./.env
+    environment:
+      FLOW_WALLET_DATABASE_DSN: postgresql://wallet_test:wallet_test@test-db:5432/wallet_test
+      FLOW_WALLET_DATABASE_TYPE: psql
+      FLOW_WALLET_ACCESS_API_HOST: test-emulator:3569
+      FLOW_WALLET_CHAIN_ID: flow-emulator
+      FLOW_WALLET_LOG_LEVEL: info
+      FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_REDIS_URL: redis://walletapi:wallet-api-redis@test-redis:6379/
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+      test-emulator:
+        condition: service_started 
