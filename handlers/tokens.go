@@ -63,3 +63,8 @@ func (s *Tokens) TokenTransfer() http.Handler {
 	h := http.HandlerFunc(s.TokenTransferFunc)
 	return UseJson(h)
 }
+
+func (s *Tokens) DeployToken() http.Handler {
+	h := http.HandlerFunc(s.DeployTokenFunc)
+	return UseJson(h)
+}

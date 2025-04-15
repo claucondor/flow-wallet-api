@@ -237,6 +237,9 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/tokens/{token}", tokenHandler.Setup()).Methods(http.MethodPost)
 		rv.Handle("/accounts/{address}/tokens/{token}/balance", tokenHandler.TokenBalance()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/tokens/{token}/transfer", tokenHandler.TokenTransfer()).Methods(http.MethodPost)
+
+		// Endpoint para desplegar contratos de tokens
+		rv.Handle("/tokens/deploy", tokenHandler.DeployToken()).Methods(http.MethodPost)
 	} else {
 		log.Info("fungible tokens disabled")
 	}

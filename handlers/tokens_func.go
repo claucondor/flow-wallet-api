@@ -222,3 +222,55 @@ func (s *Tokens) TokenTransferFunc(rw http.ResponseWriter, r *http.Request) {
 
 	handleJsonResponse(rw, http.StatusCreated, res)
 }
+
+// DeployTokenFunc maneja la solicitud para desplegar un contrato de token
+func (s *Tokens) DeployTokenFunc(rw http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TokenName string `json:"tokenName"` // Nombre del token a desplegar
+		Address   string `json:"address"`   // Dirección de la cuenta donde se desplegará
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		handleError(rw, r, &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("invalid body: %w", err),
+		})
+		return
+	}
+
+	if req.TokenName == "" {
+		handleError(rw, r, &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("tokenName is required"),
+		})
+		return
+	}
+
+	if req.Address == "" {
+		handleError(rw, r, &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("address is required"),
+		})
+		return
+	}
+
+	// Decidir si la operación es sincrónica o asincrónica
+	sync := r.FormValue(SyncQueryParameter) != ""
+
+	// Usar el método DeployTokenContractForAccount para desplegar el token
+	err = s.service.DeployTokenContractForAccount(r.Context(), sync, req.TokenName, req.Address)
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	result := map[string]interface{}{
+		"status":    "success",
+		"message":   fmt.Sprintf("Token %s deployed to address %s", req.TokenName, req.Address),
+		"tokenName": req.TokenName,
+		"address":   req.Address,
+	}
+
+	handleJsonResponse(rw, http.StatusOK, result)
+}
