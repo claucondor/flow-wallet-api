@@ -48,6 +48,8 @@ services:
       dockerfile: ./docker/wallet/Dockerfile
       target: dist
       network: host # docker build sometimes has problems fetching from alpine's CDN
+      platforms:
+        - linux/arm64
     networks:
       - private
     ports:

@@ -9,8 +9,7 @@ RUN apk update && apk add --no-cache \
 
 ENV GO111MODULE=on \
   CGO_ENABLED=1 \
-  GOOS=linux \
-  GOARCH=amd64
+  GOOS=linux
 
 WORKDIR /build
 
@@ -27,7 +26,7 @@ WORKDIR /dist
 
 RUN cp /build/main .
 
-FROM scratch as dist
+FROM alpine:latest as dist
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /dist/main /
