@@ -10,5 +10,7 @@ func GetByName(name string) (string, error) {
 		return FUSD, nil
 	case "ExampleNFT":
 		return ExampleNFT, nil
+	case "MyToken":
+		return MyToken, nil
 	}
 }

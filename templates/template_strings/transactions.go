@@ -66,16 +66,17 @@ transaction(publicKeys: [String]) {
 
 const GenericFungibleTransfer = `
 import FungibleToken from 0x{{.FungibleTokenAddress}}
+import {{.TokenContractName}} from 0x{{.TokenAddress}}
 
 transaction(amount: UFix64, to: Address) {
 	let vault: &{FungibleToken.Vault}
 	let receiver: &{FungibleToken.Receiver}
 
 	prepare(signer: auth(Storage) &Account) {
-		self.vault = signer.storage.borrow<&{FungibleToken.Vault}>(/storage/flowTokenVault)
+		self.vault = signer.storage.borrow<&{FungibleToken.Vault}>(/storage/{{.TokenStoragePath}})
 			?? panic("Could not borrow provider vault")
 
-		self.receiver = getAccount(to).capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+		self.receiver = getAccount(to).capabilities.get<&{FungibleToken.Receiver}>(/public/{{.TokenPublicReceiverPath}})
 			.borrow() ?? panic("Could not borrow receiver vault")
 	}
 

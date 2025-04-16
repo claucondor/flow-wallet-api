@@ -12,7 +12,7 @@ func TestScripts(t *testing.T) {
 	t.Run("Execute Simple Script", func(t *testing.T) {
 		// Crear un script simple que devuelve un entero
 		script := api.Script{
-			Code:      "pub fun main(): Int { return 42 }",
+			Code:      "access(all) fun main(): Int { return 42 }",
 			Arguments: []api.ScriptArgument{},
 		}
 
@@ -28,21 +28,24 @@ func TestScripts(t *testing.T) {
 			t.Errorf("Estado esperado: 200, obtenido: %d", resp.StatusCode)
 		}
 
-		// La respuesta debe ser 42
-		var result int
-		if err := json.Unmarshal(body, &result); err != nil {
+		// La respuesta es {"Value":42}
+		var cadenceValue struct {
+			Value int `json:"Value"`
+		}
+
+		if err := json.Unmarshal(body, &cadenceValue); err != nil {
 			t.Fatalf("Error al deserializar respuesta: %v - Cuerpo: %s", err, string(body))
 		}
 
-		if result != 42 {
-			t.Errorf("Resultado esperado: 42, obtenido: %d", result)
+		if cadenceValue.Value != 42 {
+			t.Errorf("Resultado esperado: 42, obtenido: %d", cadenceValue.Value)
 		}
 	})
 
 	t.Run("Execute Script With Arguments", func(t *testing.T) {
 		// Crear un script que acepta y devuelve un string
 		script := api.Script{
-			Code: "pub fun main(message: String): String { return message }",
+			Code: "access(all) fun main(message: String): String { return message }",
 			Arguments: []api.ScriptArgument{
 				{
 					Type:  "String",
@@ -63,7 +66,8 @@ func TestScripts(t *testing.T) {
 			t.Errorf("Estado esperado: 200, obtenido: %d", resp.StatusCode)
 		}
 
-		// La respuesta debe contener el mensaje original
+		// La respuesta puede ser un objeto {"Value":"Hello, Flow!"}
+		// o directamente un string "Hello, Flow!"
 		var cadenceValue struct {
 			Value string `json:"Value"`
 		}

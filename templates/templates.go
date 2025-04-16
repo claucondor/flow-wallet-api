@@ -90,12 +90,41 @@ func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) (string, erro
 		return "", err
 	}
 
+	// Prepare variables para la plantilla
+	tokenStoragePath := ""
+	tokenPublicReceiverPath := ""
+	tokenPublicBalancePath := ""
+
+	if tokenVault != "" {
+		// Eliminar los prefijos de storage/public para usar en paths dentro de Cadence
+		tokenStoragePath = strings.TrimPrefix(tokenVault, "/storage/")
+		tokenPublicReceiverPath = strings.TrimPrefix(tokenReceiver, "/public/")
+		tokenPublicBalancePath = strings.TrimPrefix(tokenBalance, "/public/")
+	}
+
+	// Asegurarse de que las direcciones no tengan el prefijo 0x duplicado
+	fungibleTokenAddress := KnownAddresses["FungibleToken.cdc"][chainId]
+	if strings.HasPrefix(fungibleTokenAddress, "0x") {
+		fungibleTokenAddress = strings.TrimPrefix(fungibleTokenAddress, "0x")
+	}
+
+	tokenAddress := token.Address
+	if strings.HasPrefix(tokenAddress, "0x") {
+		tokenAddress = strings.TrimPrefix(tokenAddress, "0x")
+	}
+
 	templateReplacer := strings.NewReplacer(
 		"TOKEN_DECLARATION_NAME", token.Name,
 		"TOKEN_ADDRESS", token.Address,
 		"TOKEN_VAULT", tokenVault,
 		"TOKEN_RECEIVER", tokenReceiver,
 		"TOKEN_BALANCE", tokenBalance,
+		"{{.TokenContractName}}", token.Name,
+		"{{.TokenAddress}}", tokenAddress,
+		"{{.TokenStoragePath}}", tokenStoragePath,
+		"{{.TokenPublicReceiverPath}}", tokenPublicReceiverPath,
+		"{{.TokenPublicBalancePath}}", tokenPublicBalancePath,
+		"{{.FungibleTokenAddress}}", fungibleTokenAddress,
 	)
 
 	knownAddressesReplacer := knownAddressesReplacers[chainId]

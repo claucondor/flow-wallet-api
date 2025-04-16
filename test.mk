@@ -59,10 +59,25 @@ test-go-health:
 	@echo "Ejecutando pruebas de salud..."
 	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestHealthCheck
 
+.PHONY: test-go-system
+test-go-system:
+	@echo "Ejecutando pruebas de sistema..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestSystemEndpoints
+
 .PHONY: test-go-accounts
 test-go-accounts:
 	@echo "Ejecutando pruebas de cuentas..."
 	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestAccountsFlow
+
+.PHONY: test-go-account-sign
+test-go-account-sign:
+	@echo "Ejecutando pruebas de firma de transacciones..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestAccountSignTransaction
+
+.PHONY: test-go-transactions
+test-go-transactions:
+	@echo "Ejecutando pruebas de transacciones..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestTransactionEndpoints
 
 .PHONY: test-go-scripts
 test-go-scripts:
@@ -73,6 +88,16 @@ test-go-scripts:
 test-go-tokens:
 	@echo "Ejecutando pruebas de tokens..."
 	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestTokens
+
+.PHONY: test-go-token-operations
+test-go-token-operations:
+	@echo "Ejecutando pruebas de operaciones de tokens..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestTokenOperations
+
+.PHONY: test-go-watchlist-ops
+test-go-watchlist-ops:
+	@echo "Ejecutando pruebas de watchlist y ops..."
+	@cd integration-tests && FLOW_WALLET_ADMIN_ADDRESS=$(FLOW_WALLET_ADMIN_ADDRESS) go test -v -run TestWatchlistAndOps
 
 .PHONY: test-integration
 test-integration: test-setup test-wait test-go

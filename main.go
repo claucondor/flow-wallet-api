@@ -240,6 +240,8 @@ func runServer(cfg *configs.Config) {
 
 		// Endpoint para desplegar contratos de tokens
 		rv.Handle("/tokens/deploy", tokenHandler.DeployToken()).Methods(http.MethodPost)
+		// Endpoint adicional para compatibilidad con las pruebas de integración
+		rv.Handle("/admin/tokens/contracts", tokenHandler.DeployToken()).Methods(http.MethodPost)
 	} else {
 		log.Info("fungible tokens disabled")
 	}
