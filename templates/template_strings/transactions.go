@@ -68,19 +68,33 @@ const GenericFungibleTransfer = `
 import FungibleToken from 0x{{.FungibleTokenAddress}}
 import {{.TokenContractName}} from 0x{{.TokenAddress}}
 
+// Transaction to transfer fungible tokens from the signer's Vault 
+// to the recipient's Receiver.
 transaction(amount: UFix64, to: Address) {
-	let vault: &{FungibleToken.Vault}
+
+	// The Vault reference for the signer's Vault resource
+	// IMPORTANT: This reference must be type &{{.TokenContractName}}.Vault to have withdraw access
+	let vault: &{{.TokenContractName}}.Vault
+
+	// The Receiver reference for the recipient's public Receiver resource
 	let receiver: &{FungibleToken.Receiver}
 
 	prepare(signer: auth(Storage) &Account) {
-		self.vault = signer.storage.borrow<&{FungibleToken.Vault}>(/storage/{{.TokenStoragePath}})
-			?? panic("Could not borrow provider vault")
+		// Get a reference to the signer's cash Vault.
+		// Borrow with the *concrete* type to get Withdraw authorization.
+		self.vault = signer.storage.borrow<&{{.TokenContractName}}.Vault>(from: /storage/{{.TokenStoragePath}})
+			?? panic("Could not borrow reference to the owner's Vault")
 
+		// Get a reference to the recipient's Receiver.
+		// Receiver interface type is correct here for the public capability.
 		self.receiver = getAccount(to).capabilities.get<&{FungibleToken.Receiver}>(/public/{{.TokenPublicReceiverPath}})
-			.borrow() ?? panic("Could not borrow receiver vault")
+			.borrow() ?? panic("Could not borrow reference to the recipient's Receiver")
 	}
 
 	execute {
+		// Withdraw the specified amount from the signer's Vault
+		// and deposit it into the recipient's Receiver
+		// This now works because self.vault has the correct type.
 		self.receiver.deposit(from: <-self.vault.withdraw(amount: amount))
 	}
 }
@@ -90,10 +104,11 @@ const GenericFungibleSetup = `
 import FungibleToken from 0x{{.FungibleTokenAddress}}
 import {{.TokenContractName}} from 0x{{.TokenAddress}}
 
+// Transaction to set up a {{.TokenContractName}} Vault and Receiver if they don't exist.
 transaction {
 	prepare(signer: auth(Storage, Keys) &Account) {
 		// Configure storage for {{.TokenContractName}} if it doesn't already exist
-		if signer.storage.borrow<&{{.TokenContractName}}.Vault>(/storage/{{.TokenStoragePath}}) == nil {
+		if signer.storage.borrow<&{{.TokenContractName}}.Vault>(from: /storage/{{.TokenStoragePath}}) == nil {
 			// Create a new Vault and put it in storage
 			signer.storage.save(
 				<-{{.TokenContractName}}.createEmptyVault(),
@@ -113,11 +128,32 @@ transaction {
 				signer.capabilities.storage.issue<&{FungibleToken.Balance}>(/storage/{{.TokenStoragePath}}),
 				at: /public/{{.TokenPublicBalancePath}}
 			)
+		} else {
+			// Vault already exists, but we can check if the public capabilities need linking/publishing.
+            // Check and publish Receiver if missing or invalid
+            if !signer.capabilities.exists(/public/{{.TokenPublicReceiverPath}}) {
+                signer.capabilities.publish(
+                    signer.capabilities.storage.issue<&{FungibleToken.Receiver}>(/storage/{{.TokenStoragePath}}),
+                    at: /public/{{.TokenPublicReceiverPath}}
+                )
+            } else {
+                // Optionally force-publish to ensure it's the correct type/path, though issue might be preferred
+                // Or check if borrow() returns nil and then publish
+            }
+
+            // Check and publish Balance if missing or invalid
+            if !signer.capabilities.exists(/public/{{.TokenPublicBalancePath}}) {
+                 signer.capabilities.publish(
+                    signer.capabilities.storage.issue<&{FungibleToken.Balance}>(/storage/{{.TokenStoragePath}}),
+                    at: /public/{{.TokenPublicBalancePath}}
+                )
+            } else {
+                 // Optionally force-publish or check borrow()
+            }
 		}
 	}
 }
 `
-
 const AddProposalKeyTransaction = `
 transaction(adminKeyIndex: Int, numProposalKeys: UInt16) {
   prepare(account: auth(Storage, Keys) &Account) {
@@ -158,19 +194,34 @@ const GenericFungibleTransferMemo = `
 import FungibleToken from 0x{{.FungibleTokenAddress}}
 import {{.TokenContractName}} from 0x{{.TokenAddress}}
 
+// Transaction to transfer fungible tokens from the signer's Vault 
+// to the recipient's Receiver, including a memo.
 transaction(amount: UFix64, to: Address, memo: String) {
-	let vault: &{FungibleToken.Vault}
+
+	// The Vault reference for the signer's Vault resource
+	// IMPORTANT: This reference must be type &{{.TokenContractName}}.Vault to have withdraw access
+	let vault: &{{.TokenContractName}}.Vault
+
+	// The Receiver reference for the recipient's public Receiver resource
 	let receiver: &{FungibleToken.Receiver}
 
 	prepare(signer: auth(Storage) &Account) {
-		self.vault = signer.storage.borrow<&{FungibleToken.Vault}>(/storage/{{.TokenStoragePath}})
-			?? panic("Could not borrow provider vault")
+		// Get a reference to the signer's cash Vault.
+		// Borrow with the *concrete* type to get Withdraw authorization.
+		self.vault = signer.storage.borrow<&{{.TokenContractName}}.Vault>(from: /storage/{{.TokenStoragePath}})
+			?? panic("Could not borrow reference to the owner's Vault")
 
+		// Get a reference to the recipient's Receiver.
 		self.receiver = getAccount(to).capabilities.get<&{FungibleToken.Receiver}>(/public/{{.TokenPublicReceiverPath}})
-			.borrow() ?? panic("Could not borrow receiver vault")
+			.borrow() ?? panic("Could not borrow reference to the recipient's Receiver")
+
+		// Log the memo (or handle it as needed)
+		log("Transfer Memo: ".concat(memo))
 	}
 
 	execute {
+		// Withdraw the specified amount from the signer's Vault
+		// and deposit it into the recipient's Receiver
 		self.receiver.deposit(from: <-self.vault.withdraw(amount: amount))
 	}
 }
