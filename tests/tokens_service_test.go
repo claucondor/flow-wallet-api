@@ -9,9 +9,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
 
-	"github.com/flow-hydraulics/flow-wallet-api/jobs"
+	"github.com/flow-hydraulics/flow-wallet-api/internal/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
-	"github.com/flow-hydraulics/flow-wallet-api/transactions"
+	"github.com/flow-hydraulics/flow-wallet-api/internal/transactions"
 )
 
 func Test_TokensSetup(t *testing.T) {

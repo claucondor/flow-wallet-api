@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
-	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/internal/flow_helpers"
+	"github.com/flow-hydraulics/flow-wallet-api/internal/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"

@@ -1,5 +1,9 @@
-# Simplify Docker Compose detection - just use the command directly
-# This works with both Docker Compose V2 and V1
+# ==============================================================================
+# Flow Wallet API Makefile
+# Updated for unified Docker architecture
+# ==============================================================================
+
+# Docker Compose command
 DOCKER_COMPOSE_CMD = docker compose
 
 # Detect OS for local commands
@@ -15,6 +19,9 @@ else
     KILL_CMD = echo "Unsupported OS for kill command:"
 endif
 
+# Profile-based Docker Compose commands
+DC = $(DOCKER_COMPOSE_CMD)
+
 # Only check for flow and go when running commands that need them
 check-flow:
 ifeq (, $(shell which flow))
@@ -26,46 +33,100 @@ ifeq (, $(shell which go))
 	$(error "No go in PATH")
 endif
 
-dev = $(DOCKER_COMPOSE_CMD) -f docker-compose.dev.yml -p flow-wallet-api-dev
-lightweight = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight
-lightweight-testnet = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight-testnet.yml -p flow-wallet-api-lightweight-testnet
-lightweight-mainnet = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight-mainnet.yml -p flow-wallet-api-lightweight-mainnet
-test-suite = $(DOCKER_COMPOSE_CMD) -f docker-compose.test-suite.yml -p flow-wallet-api-test
+# ==============================================================================
+# PROFILE SHORTCUTS - Using unified docker-compose.yml with profiles
+# ==============================================================================
 
 .PHONY: dev
 dev:
-	@$(dev) up --remove-orphans -d db pgadmin emulator redis
+	@echo "🚀 Starting development environment..."
+	@$(DC) --profile dev up --build
 
-.PHONY: stop
-stop:
-	@$(dev) stop
+.PHONY: dev-bg
+dev-bg:
+	@echo "🚀 Starting development environment in background..."
+	@$(DC) --profile dev up --build -d
 
-.PHONY: down
-down:
-	@$(dev) down --remove-orphans
-
-.PHONY: reset
-reset: down dev
+.PHONY: prod  
+prod:
+	@echo "🏭 Starting production environment..."
+	@$(DC) --profile prod up --build -d
 
 .PHONY: lightweight
 lightweight:
-	@$(lightweight) down --remove-orphans || true
-	@$(lightweight) build api
-	@$(lightweight) up -d
+	@echo "🪶 Starting lightweight environment..."
+	@$(DC) --profile lightweight up --build
 
-.PHONY: lightweight-logs
+.PHONY: test
+test:
+	@echo "🧪 Starting test environment..."
+	@$(DC) --profile test up --build --abort-on-container-exit
+
+.PHONY: docs
+docs:
+	@echo "📚 Starting documentation server..."
+	@$(DC) --profile docs up --build
+
+.PHONY: admin
+admin:
+	@echo "🛠️  Running admin tools..."
+	@$(DC) --profile admin run --rm admin
+
+.PHONY: api
+api:
+	@echo "🔌 Starting API only..."
+	@$(DC) --profile api up --build
+
+.PHONY: api-v2
+api-v2:
+	@echo "🔌 Starting API V2..."
+	@$(DC) --profile api-v2 up --build
+
+# ==============================================================================
+# MANAGEMENT COMMANDS
+# ==============================================================================
+
+.PHONY: build clean logs shell stop restart status
+
+build:
+	@echo "🔨 Building all images..."
+	@$(DC) build --parallel
+
+clean:
+	@echo "🧹 Cleaning up Docker resources..."
+	@$(DC) down -v --remove-orphans
+	docker system prune -f
+	docker volume prune -f
+
+logs:
+	@$(DC) logs -f $(SERVICE)
+
+shell:
+	@$(DC) exec $(SERVICE) sh
+
+stop:
+	@$(DC) stop
+
+restart:
+	@$(DC) restart
+
+status:
+	@$(DC) ps
+
+# Aliases for backward compatibility
+.PHONY: down reset lightweight-logs lightweight-stop
+down: stop
+reset: clean dev
 lightweight-logs:
-	@$(lightweight) logs -f
-
-.PHONY: lightweight-stop
+	@$(DC) --profile lightweight logs -f
 lightweight-stop:
-	@$(lightweight) stop
+	@$(DC) --profile lightweight stop
 
 .PHONY: lightweight-down
 lightweight-down:
-	@$(lightweight) down --remove-orphans
+	@$(DC) --profile lightweight down --remove-orphans
 
-.PHONY: lightweight-reset
+.PHONY: lightweight-reset  
 lightweight-reset: lightweight-down lightweight
 
 .PHONY: lightweight-idempotent

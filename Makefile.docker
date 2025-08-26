@@ -1,0 +1,225 @@
+# ==============================================================================
+# Docker Makefile for Flow Wallet API
+# Simplifies Docker Compose operations with profiles
+# ==============================================================================
+
+# Default values
+PROFILE ?= dev
+SERVICE ?= api
+COMMAND ?= up
+
+# Docker Compose command
+DC = docker-compose
+
+# ==============================================================================
+# PROFILE SHORTCUTS
+# ==============================================================================
+
+.PHONY: dev prod lightweight test docs admin api api-v2
+
+# Development mode (full stack)
+dev:
+	@echo "🚀 Starting development environment..."
+	$(DC) --profile dev up --build
+
+dev-bg:
+	@echo "🚀 Starting development environment in background..."
+	$(DC) --profile dev up --build -d
+
+# Production mode 
+prod:
+	@echo "🏭 Starting production environment..."
+	$(DC) --profile prod up --build -d
+
+# Lightweight mode (SQLite only)
+lightweight:
+	@echo "🪶 Starting lightweight environment..."
+	$(DC) --profile lightweight up --build
+
+# Test mode
+test:
+	@echo "🧪 Starting test environment..."
+	$(DC) --profile test up --build --abort-on-container-exit
+
+# Documentation only
+docs:
+	@echo "📚 Starting documentation server..."
+	$(DC) --profile docs up --build
+
+# Admin tools
+admin:
+	@echo "🛠️  Running admin tools..."
+	$(DC) --profile admin run --rm admin
+
+# API only
+api:
+	@echo "🔌 Starting API only..."
+	$(DC) --profile api up --build
+
+# API V2 only  
+api-v2:
+	@echo "🔌 Starting API V2..."
+	$(DC) --profile api-v2 up --build
+
+# ==============================================================================
+# MANAGEMENT COMMANDS
+# ==============================================================================
+
+.PHONY: build clean logs shell stop restart status
+
+# Build all images
+build:
+	@echo "🔨 Building all images..."
+	$(DC) build --parallel
+
+# Build specific target
+build-%:
+	@echo "🔨 Building $* target..."
+	docker build --target $*-production -t flow-wallet-api:$* .
+
+# Clean up everything
+clean:
+	@echo "🧹 Cleaning up Docker resources..."
+	$(DC) down -v --remove-orphans
+	docker system prune -f
+	docker volume prune -f
+
+# Clean nuclear (removes images too)
+clean-all: clean
+	@echo "💥 Nuclear cleanup..."
+	docker rmi $$(docker images "flow-wallet*" -q) 2>/dev/null || true
+
+# Show logs
+logs:
+	$(DC) logs -f $(SERVICE)
+
+# Get shell in container
+shell:
+	$(DC) exec $(SERVICE) sh
+
+# Stop all services
+stop:
+	$(DC) stop
+
+# Restart services
+restart:
+	$(DC) restart
+
+# Show status
+status:
+	$(DC) ps
+
+# ==============================================================================
+# DATABASE COMMANDS
+# ==============================================================================
+
+.PHONY: db-migrate db-seed db-reset db-shell
+
+# Run database migrations
+db-migrate:
+	@echo "🗃️  Running database migrations..."
+	$(DC) --profile admin run --rm admin -command=migrate
+
+# Seed database
+db-seed:
+	@echo "🌱 Seeding database..."
+	$(DC) --profile admin run --rm admin -command=seed
+
+# Reset database
+db-reset:
+	@echo "🗑️  Resetting database..."
+	$(DC) stop postgres
+	docker volume rm flow-wallet_postgres_data 2>/dev/null || true
+	$(DC) --profile dev up postgres -d
+
+# Get database shell
+db-shell:
+	$(DC) exec postgres psql -U wallet -d wallet
+
+# ==============================================================================
+# TESTING COMMANDS
+# ==============================================================================
+
+.PHONY: test-unit test-integration test-all
+
+# Run unit tests
+test-unit:
+	@echo "🧪 Running unit tests..."
+	go test ./... -short
+
+# Run integration tests
+test-integration:
+	@echo "🔗 Running integration tests..."
+	$(DC) --profile test run --rm api go test ./tests/...
+
+# Run all tests
+test-all: test-unit test-integration
+
+# ==============================================================================
+# UTILITY COMMANDS  
+# ==============================================================================
+
+.PHONY: help env-setup
+
+# Show help
+help:
+	@echo "Flow Wallet API Docker Commands:"
+	@echo ""
+	@echo "🚀 PROFILES:"
+	@echo "  dev          - Full development stack"
+	@echo "  prod         - Production stack with Nginx"
+	@echo "  lightweight  - Minimal SQLite-based stack"
+	@echo "  test         - Testing environment"
+	@echo "  api          - API with dependencies"
+	@echo "  api-v2       - API V2 with dependencies"  
+	@echo "  admin        - Admin tools"
+	@echo "  docs         - Documentation only"
+	@echo ""
+	@echo "🔨 BUILD:"
+	@echo "  build        - Build all images"
+	@echo "  build-TARGET - Build specific target (api, api-v2, admin)"
+	@echo ""
+	@echo "🗃️  DATABASE:"  
+	@echo "  db-migrate   - Run migrations"
+	@echo "  db-seed      - Seed database"
+	@echo "  db-reset     - Reset database"
+	@echo "  db-shell     - Database shell"
+	@echo ""
+	@echo "🧪 TESTING:"
+	@echo "  test-unit    - Unit tests"
+	@echo "  test-integration - Integration tests"
+	@echo "  test-all     - All tests"
+	@echo ""
+	@echo "🛠️  MANAGEMENT:"
+	@echo "  logs         - Show logs (SERVICE=service_name)"
+	@echo "  shell        - Container shell (SERVICE=service_name)"  
+	@echo "  status       - Show container status"
+	@echo "  stop         - Stop all services"
+	@echo "  restart      - Restart services"
+	@echo "  clean        - Clean up containers/volumes"
+	@echo "  clean-all    - Nuclear cleanup (removes images)"
+	@echo ""
+	@echo "📝 EXAMPLES:"
+	@echo "  make dev                    # Start development"
+	@echo "  make prod                   # Start production"
+	@echo "  make lightweight            # Start lightweight mode" 
+	@echo "  make logs SERVICE=api       # Show API logs"
+	@echo "  make shell SERVICE=postgres # Get database shell"
+	@echo ""
+
+# Setup environment file
+env-setup:
+	@if [ ! -f .env ]; then \
+		echo "📝 Creating .env from .env.example..."; \
+		cp .env.example .env; \
+		echo "✅ Created .env file. Please review and adjust as needed."; \
+	else \
+		echo "⚠️  .env file already exists."; \
+	fi
+
+# ==============================================================================
+# DEFAULT TARGET
+# ==============================================================================
+
+# Default: show help
+.DEFAULT_GOAL := help

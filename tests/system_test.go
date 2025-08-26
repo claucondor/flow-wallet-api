@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flow-hydraulics/flow-wallet-api/handlers"
+	"github.com/flow-hydraulics/flow-wallet-api/internal/handlers"
 	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/gorilla/mux"
 )

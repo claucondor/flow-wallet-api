@@ -139,3 +139,41 @@ main
 flow-wallet-api
 
 flow/flowdb
+
+# Go binaries and build artifacts
+bin/
+/bin/*
+*.exe
+/cmd/*/main
+/cmd/*/*
+
+# Docker and deployment
+docker-compose.override.yml
+.docker/
+
+# IDE and editor files
+.claude/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Data directories
+data/
+/data/
+wallet_data/
+postgres_data/
+redis_data/
+emulator_data/
+
+# Large binary files that should be rebuilt
+phoenix-wallet-api
