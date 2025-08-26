@@ -23,12 +23,16 @@ tmp/
 
 # Docker specific
 .github/
-api/
 examples/
 docker/
-docker-compose.yml
-docker-compose.test-suite.yml
-Makefile
+docker-compose*.yml
+!docker-compose.quave.lightweight.yml
+Makefile*
+!Dockerfile.quave
+
+# Data directories
+data/
+phoenix-wallet-api
 
 # Not required for build
 api-test-scripts/
@@ -36,3 +40,4 @@ api-test-scripts/
 *.svg
 *.html
 *.yml
+!openapi.yml

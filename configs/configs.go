@@ -20,6 +20,11 @@ type Config struct {
 	// When enabled, it automatically configures SQLite, disables idempotency middleware,
 	// and optimizes worker settings for simpler deployments
 	LightweightMode bool `env:"LIGHTWEIGHT_MODE" envDefault:"false"`
+	
+	// QuaveMode enables cloud deployment optimizations (no Redis but with PostgreSQL)
+	// When enabled, it disables idempotency middleware and optimizes worker settings
+	// but keeps PostgreSQL for persistence
+	QuaveMode bool `env:"QUAVE_MODE" envDefault:"false"`
 
 	// -- Logger config --
 	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`

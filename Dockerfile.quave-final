@@ -1,0 +1,193 @@
+# Dockerfile para Quave Cloud - Modo Quave (API + Swagger + PostgreSQL)
+
+# 1. Construir TU API con el nuevo modo Quave
+FROM golang:1.23.7-alpine AS wallet-builder
+
+RUN apk update && apk add --no-cache \
+  ca-certificates \
+  musl-dev \
+  gcc \
+  build-base \
+  git
+
+ENV GO111MODULE=on \
+  CGO_ENABLED=1 \
+  GOOS=linux \
+  GOARCH=amd64
+
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN ./build.sh
+
+# 2. Imagen final con API + Swagger
+FROM nginx:alpine
+
+# Instalar dependencias
+RUN apk add --no-cache \
+    bash \
+    curl \
+    supervisor \
+    python3
+
+# Crear directorios
+RUN mkdir -p /app /var/log/supervisor /var/www/swagger
+
+# Copiar TU API compilada con soporte para modo Quave
+COPY --from=wallet-builder /build/main /app/main
+RUN chmod +x /app/main
+
+# Copiar archivos de configuración
+COPY openapi.yml /var/www/swagger/openapi.yml
+
+# Configurar Nginx
+RUN rm /etc/nginx/nginx.conf
+COPY <<EOF /etc/nginx/nginx.conf
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    server {
+        listen 3000;
+        
+        # Swagger UI
+        location /docs {
+            proxy_pass http://localhost:8080;
+            proxy_set_header Host \$host;
+        }
+        
+        # Servir openapi.yml
+        location /openapi.yml {
+            alias /var/www/swagger/openapi.yml;
+        }
+        
+        # API endpoints
+        location / {
+            proxy_pass http://localhost:3001;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        }
+    }
+}
+EOF
+
+# Crear página de Swagger UI
+COPY <<EOF /var/www/swagger/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flow Wallet API - Quave Cloud</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
+    <script>
+        SwaggerUIBundle({
+            url: '/openapi.yml',
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            displayOperationId: true,
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 1,
+            displayRequestDuration: true,
+            docExpansion: 'list',
+            filter: true,
+            showExtensions: true,
+            showCommonExtensions: true,
+            tryItOutEnabled: true,
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.presets.standalone
+            ]
+        });
+    </script>
+</body>
+</html>
+EOF
+
+# Configurar supervisor - Modo Quave (sin Redis, con PostgreSQL)
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:wallet-api]
+command=/app/main
+directory=/app
+stdout_logfile=/var/log/supervisor/api.log
+stderr_logfile=/var/log/supervisor/api.log
+autorestart=true
+environment=PORT="3001",FLOW_WALLET_QUAVE_MODE="true",FLOW_WALLET_ACCESS_API_HOST="%(ENV_FLOW_WALLET_ACCESS_API_HOST)s",FLOW_WALLET_CHAIN_ID="%(ENV_FLOW_WALLET_CHAIN_ID)s",FLOW_WALLET_DATABASE_TYPE="psql",FLOW_WALLET_DATABASE_DSN="%(ENV_FLOW_WALLET_DATABASE_DSN)s",FLOW_WALLET_ADMIN_PRIVATE_KEY="%(ENV_FLOW_WALLET_ADMIN_PRIVATE_KEY)s",FLOW_WALLET_DEFAULT_KEY_TYPE="local",FLOW_WALLET_ENCRYPTION_KEY="%(ENV_FLOW_WALLET_ENCRYPTION_KEY)s",FLOW_WALLET_ENCRYPTION_KEY_TYPE="local",FLOW_WALLET_ENABLED_TOKENS="%(ENV_FLOW_WALLET_ENABLED_TOKENS)s",FLOW_WALLET_ADMIN_PROPOSAL_KEY_COUNT="50",INIT_FUNGIBLE_TOKEN_VAULTS_ON_ACCOUNT_CREATION="true"
+
+[program:swagger-ui]
+command=python3 -m http.server 8080
+directory=/var/www/swagger
+stdout_logfile=/var/log/supervisor/swagger.log
+stderr_logfile=/var/log/supervisor/swagger.log
+autorestart=true
+
+[program:nginx]
+command=nginx -g "daemon off;"
+stdout_logfile=/var/log/supervisor/nginx.log
+stderr_logfile=/var/log/supervisor/nginx.log
+autorestart=true
+EOF
+
+# Script de inicio
+COPY <<EOF /app/start.sh
+#!/bin/bash
+set -e
+
+echo "🚀 Iniciando Flow Wallet API en Quave Cloud..."
+echo "📊 Modo: Quave (PostgreSQL + Sin Redis)"
+echo "🌐 Red: \${FLOW_WALLET_CHAIN_ID:-flow-testnet}"
+echo "🔗 API Host: \${FLOW_WALLET_ACCESS_API_HOST:-access.testnet.nodes.onflow.org:9000}"
+echo "🗄️ Database: \${FLOW_WALLET_DATABASE_DSN}"
+
+# Verificar variables requeridas
+if [ -z "\${FLOW_WALLET_DATABASE_DSN}" ]; then
+    echo "❌ Error: FLOW_WALLET_DATABASE_DSN es requerida"
+    exit 1
+fi
+
+if [ -z "\${FLOW_WALLET_ADMIN_PRIVATE_KEY}" ]; then
+    echo "❌ Error: FLOW_WALLET_ADMIN_PRIVATE_KEY es requerida"
+    exit 1
+fi
+
+if [ -z "\${FLOW_WALLET_ENCRYPTION_KEY}" ]; then
+    echo "❌ Error: FLOW_WALLET_ENCRYPTION_KEY es requerida"
+    exit 1
+fi
+
+echo "✅ Variables de entorno verificadas"
+
+# Iniciar supervisor
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+EOF
+
+RUN chmod +x /app/start.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/v1/info || exit 1
+
+# Variables de entorno por defecto
+ENV FLOW_WALLET_QUAVE_MODE=true \
+    FLOW_WALLET_CHAIN_ID=flow-testnet \
+    FLOW_WALLET_ACCESS_API_HOST=access.testnet.nodes.onflow.org:9000 \
+    FLOW_WALLET_DATABASE_TYPE=psql \
+    FLOW_WALLET_ENABLED_TOKENS="FUSD:0x3c5959b568896393:fusd,FlowToken:0x1654653399040a61:flowToken"
+
+# Exponer puerto
+EXPOSE 3000
+
+CMD ["/app/start.sh"]

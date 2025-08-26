@@ -70,7 +70,7 @@ func main() {
 }
 
 func runServer(cfg *configs.Config) {
-	// Apply lightweight mode configuration if enabled
+	// Apply deployment mode configurations
 	if cfg.LightweightMode {
 		log.Info("Running in lightweight mode with simplified dependencies")
 		
@@ -91,6 +91,24 @@ func runServer(cfg *configs.Config) {
 		if cfg.WorkerQueueCapacity > 500 {
 			cfg.WorkerQueueCapacity = 500
 		}
+	} else if cfg.QuaveMode {
+		log.Info("Running in Quave Cloud mode with optimized settings")
+		
+		// Keep PostgreSQL but disable Redis-dependent features
+		// Database configuration should be provided via environment variables
+		
+		// Disable idempotency middleware to remove Redis dependency
+		cfg.DisableIdempotencyMiddleware = true
+		
+		// Optimize worker settings for cloud deployment
+		if cfg.WorkerCount > 4 {
+			cfg.WorkerCount = 4
+		}
+		if cfg.WorkerQueueCapacity > 500 {
+			cfg.WorkerQueueCapacity = 500
+		}
+		
+		log.Info("Quave mode: Redis disabled, PostgreSQL enabled, workers optimized")
 	}
 	
 	configs.ConfigureLogger(cfg.LogLevel)

@@ -1,0 +1,171 @@
+# Dockerfile basado exactamente en docker-compose.quave.lightweight.yml que funciona
+
+# 1. Construir TU API (igual que en el compose)
+FROM golang:1.23.7-alpine AS wallet-builder
+
+RUN apk update && apk add --no-cache \
+  ca-certificates \
+  musl-dev \
+  gcc \
+  build-base \
+  git
+
+ENV GO111MODULE=on \
+  CGO_ENABLED=1 \
+  GOOS=linux \
+  GOARCH=amd64
+
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN ./build.sh
+
+# 2. Imagen final que combina todos los servicios del compose
+FROM nginx:alpine
+
+# Instalar dependencias
+RUN apk add --no-cache \
+    bash \
+    curl \
+    supervisor \
+    sqlite \
+    python3
+
+# Crear directorios
+RUN mkdir -p /app/data /flowdb /var/log/supervisor /var/www/swagger
+
+# Copiar TU API compilada
+COPY --from=wallet-builder /build/main /app/main
+RUN chmod +x /app/main
+
+# Copiar archivos de configuración
+COPY openapi.yml /var/www/swagger/openapi.yml
+
+# Usar Flow Emulator desde la imagen oficial (igual que en compose)
+COPY --from=gcr.io/flow-container-registry/emulator:latest /bin/app /usr/local/bin/flow-emulator
+RUN chmod +x /usr/local/bin/flow-emulator
+
+# Configurar Nginx (proxy como en compose)
+RUN rm /etc/nginx/nginx.conf
+COPY <<EOF /etc/nginx/nginx.conf
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    server {
+        listen 3000;
+        
+        # Swagger UI
+        location /docs {
+            proxy_pass http://localhost:8080;
+            proxy_set_header Host \$host;
+        }
+        
+        # API (mismo puerto que en compose)
+        location / {
+            proxy_pass http://localhost:3000;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+        }
+    }
+}
+EOF
+
+# Crear página de Swagger UI
+COPY <<EOF /var/www/swagger/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flow Wallet API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
+    <style>
+        body { margin: 0; padding: 0; }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
+    <script>
+        SwaggerUIBundle({
+            url: '/openapi.yml',
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            displayOperationId: true,
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 1,
+            displayRequestDuration: true,
+            docExpansion: 'list',
+            filter: true,
+            showExtensions: true,
+            showCommonExtensions: true,
+            tryItOutEnabled: true,
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.presets.standalone
+            ]
+        });
+    </script>
+</body>
+</html>
+EOF
+
+# Configurar supervisor (mismas configuraciones que el compose)
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:flow-emulator]
+command=/usr/local/bin/flow-emulator --persist --storage-dir=/flowdb --port=3569 --host=0.0.0.0
+directory=/flowdb
+stdout_logfile=/var/log/supervisor/emulator.log
+stderr_logfile=/var/log/supervisor/emulator.log
+autorestart=true
+environment=FLOW_SERVICEPRIVATEKEY="91a22fbd87392b019fbe332c32695c14cf2ba5b6521476a8540228bdf1987068",FLOW_SERVICEKEYSIGALGO="ECDSA_P256",FLOW_SERVICEKEYHASHALGO="SHA3_256"
+
+[program:wallet-api]
+command=/app/main
+directory=/app
+stdout_logfile=/var/log/supervisor/api.log
+stderr_logfile=/var/log/supervisor/api.log
+autorestart=true
+environment=FLOW_WALLET_LIGHTWEIGHT_MODE="true",FLOW_WALLET_ACCESS_API_HOST="localhost:3569",FLOW_WALLET_CHAIN_ID="flow-emulator",FLOW_WALLET_DATABASE_DSN="/app/data/wallet.db",FLOW_WALLET_ADMIN_PRIVATE_KEY="91a22fbd87392b019fbe332c32695c14cf2ba5b6521476a8540228bdf1987068",FLOW_WALLET_DEFAULT_KEY_TYPE="local",FLOW_WALLET_ENCRYPTION_KEY="faae4ed1c30f4e4555ee3a71f1044a8e",FLOW_WALLET_ENCRYPTION_KEY_TYPE="local",FLOW_WALLET_ENABLED_TOKENS="FUSD:0xf8d6e0586b0a20c7:fusd,FlowToken:0x0ae53cb6e3f42a79:flowToken",FLOW_WALLET_ADMIN_PROPOSAL_KEY_COUNT="50",INIT_FUNGIBLE_TOKEN_VAULTS_ON_ACCOUNT_CREATION="true"
+
+[program:swagger-ui]
+command=python3 -m http.server 8080
+directory=/var/www/swagger
+stdout_logfile=/var/log/supervisor/swagger.log
+stderr_logfile=/var/log/supervisor/swagger.log
+autorestart=true
+EOF
+
+# Script de inicio
+COPY <<EOF /app/start.sh
+#!/bin/bash
+set -e
+
+echo "Iniciando Flow Wallet API (modo Quave)..."
+
+# Crear directorio de datos
+mkdir -p /app/data /flowdb
+
+# Iniciar supervisor
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+EOF
+
+RUN chmod +x /app/start.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/v1/info || exit 1
+
+# Exponer puerto
+EXPOSE 3000
+
+CMD ["/app/start.sh"]

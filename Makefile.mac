@@ -1,0 +1,219 @@
+# Simplify Docker Compose detection - just use the command directly
+# This works with both Docker Compose V2 and V1
+DOCKER_COMPOSE_CMD = docker compose
+
+# Detect OS for local commands
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    OPEN_CMD = xdg-open
+    KILL_CMD = pkill -f
+    # Linux specific Docker Compose commands
+    DOCKER_DOWN_CMD = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight down --remove-orphans
+else ifeq ($(UNAME_S),Darwin)
+    OPEN_CMD = open
+    KILL_CMD = pkill -f
+    # macOS specific Docker Compose commands - avoid using -f flag directly
+    DOCKER_DOWN_CMD = COMPOSE_FILE=docker-compose.lightweight.yml $(DOCKER_COMPOSE_CMD) -p flow-wallet-api-lightweight down --remove-orphans
+else
+    OPEN_CMD = echo "Unsupported OS for open command:"
+    KILL_CMD = echo "Unsupported OS for kill command:"
+    DOCKER_DOWN_CMD = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight down --remove-orphans
+endif
+
+# Define ports for local services
+EMULATOR_PORT = 3569
+API_PORT = 3000
+SWAGGER_PORT = 8082
+
+# Only check for flow and go when running commands that need them
+check-flow:
+ifeq (, $(shell which flow))
+	$(error "No flow in PATH. Install Flow CLI: https://docs.onflow.org/flow-cli/install/")
+endif
+
+check-go:
+ifeq (, $(shell which go))
+	$(error "No go in PATH")
+endif
+
+dev = $(DOCKER_COMPOSE_CMD) -f docker-compose.dev.yml -p flow-wallet-api-dev
+test-suite = $(DOCKER_COMPOSE_CMD) -f docker-compose.test-suite.yml -p flow-wallet-api-test
+
+.PHONY: dev
+dev:
+	@$(dev) up --remove-orphans -d db pgadmin emulator redis
+
+.PHONY: stop
+stop:
+	@$(dev) stop
+
+.PHONY: down
+down:
+	@$(dev) down --remove-orphans
+
+.PHONY: reset
+reset: down dev
+
+.PHONY: lightweight
+lightweight:
+	@$(DOCKER_DOWN_CMD) || true
+ifeq ($(UNAME_S),Darwin)
+	@COMPOSE_FILE=docker-compose.lightweight.yml $(DOCKER_COMPOSE_CMD) -p flow-wallet-api-lightweight build api
+	@COMPOSE_FILE=docker-compose.lightweight.yml $(DOCKER_COMPOSE_CMD) -p flow-wallet-api-lightweight up -d
+else
+	@$(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight build api
+	@$(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight up -d
+endif
+
+.PHONY: lightweight-logs
+lightweight-logs:
+ifeq ($(UNAME_S),Darwin)
+	@COMPOSE_FILE=docker-compose.lightweight.yml $(DOCKER_COMPOSE_CMD) -p flow-wallet-api-lightweight logs -f
+else
+	@$(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight logs -f
+endif
+
+.PHONY: lightweight-stop
+lightweight-stop:
+ifeq ($(UNAME_S),Darwin)
+	@COMPOSE_FILE=docker-compose.lightweight.yml $(DOCKER_COMPOSE_CMD) -p flow-wallet-api-lightweight stop
+else
+	@$(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight stop
+endif
+
+.PHONY: lightweight-down
+lightweight-down:
+	@$(DOCKER_DOWN_CMD)
+
+.PHONY: lightweight-reset
+lightweight-reset: lightweight-down lightweight
+
+.PHONY: run-tests
+run-tests: check-go
+	@go test ./... -p 1
+
+.PHONY: test
+test: check-flow check-go start-emulator deploy run-tests
+
+.PHONY: test-clean
+test-clean: check-go clean-test-cache test
+
+.PHONY: clean-test-cache
+clean-test-cache: check-go
+	@go clean -testcache
+
+.PHONY: deploy
+deploy: check-flow
+	@cd flow && flow project deploy --update
+
+.PHONY: start-emulator
+start-emulator: check-flow emulator.pid
+	@sleep 1
+
+.PHONY: stop-emulator
+stop-emulator: check-flow emulator.pid
+	@kill `cat $<` && rm $<
+
+emulator.pid: check-flow
+	@cd flow && { flow emulator -b 100ms & echo $$! > ../$@; }
+
+.PHONY: lint
+lint:
+	@golangci-lint run
+
+.PHONY: run-test-suite
+run-test-suite:
+	@$(test-suite) build flow api
+	@$(test-suite) up --remove-orphans -d db redis flow
+	@$(test-suite) unpause \
+	; echo "\nRunning tests, hang on...\n" \
+	; $(test-suite) run --rm api go test ./... -p 1 \
+	; echo "\nRunning linter, hang on...\n" \
+	; $(test-suite) run --rm lint golangci-lint run \
+	; $(test-suite) pause
+
+.PHONY: stop-test-suite
+stop-test-suite:
+	@$(test-suite) down --remove-orphans
+
+.PHONY: clean-test-suite
+clean-test-suite:
+	@$(test-suite) run --rm api go clean -testcache
+
+# Check if a port is in use
+port-in-use:
+	@nc -z localhost $(PORT) > /dev/null 2>&1 && echo "true" || echo "false"
+
+# Local commands without Docker
+.PHONY: local-start
+local-start: check-flow check-go
+	@echo "Starting Phoenix Wallet API services locally..."
+	@echo "Creating necessary directories..."
+	@mkdir -p ./data
+	
+	@echo "Checking if ports are available..."
+	@if [ "$$(nc -z localhost $(EMULATOR_PORT) > /dev/null 2>&1 && echo "true" || echo "false")" = "true" ]; then \
+		echo "ERROR: Port $(EMULATOR_PORT) is already in use. Cannot start Flow Emulator."; \
+		exit 1; \
+	fi
+	@if [ "$$(nc -z localhost $(API_PORT) > /dev/null 2>&1 && echo "true" || echo "false")" = "true" ]; then \
+		echo "ERROR: Port $(API_PORT) is already in use. Cannot start Phoenix Wallet API."; \
+		exit 1; \
+	fi
+	@if [ "$$(nc -z localhost $(SWAGGER_PORT) > /dev/null 2>&1 && echo "true" || echo "false")" = "true" ]; then \
+		echo "ERROR: Port $(SWAGGER_PORT) is already in use. Cannot start Swagger UI."; \
+		exit 1; \
+	fi
+	
+	@echo "Starting Flow Emulator..."
+	@cd flow && { flow emulator --persist --dbpath="../data/flowdb" --port=$(EMULATOR_PORT) & echo $$! > ../emulator.pid; }
+	@echo "Flow Emulator started with PID: $$(cat emulator.pid)"
+	@sleep 3
+	
+	@echo "Starting Swagger UI on port $(SWAGGER_PORT)..."
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 -m http.server $(SWAGGER_PORT) --directory . & echo $$! > swagger.pid; \
+		echo "Swagger UI started with Python HTTP server (PID: $$(cat swagger.pid))"; \
+	elif command -v python >/dev/null 2>&1; then \
+		python -m SimpleHTTPServer $(SWAGGER_PORT) & echo $$! > swagger.pid; \
+		echo "Swagger UI started with Python HTTP server (PID: $$(cat swagger.pid))"; \
+	else \
+		echo "Python not found, trying with Node.js"; \
+		if command -v npx >/dev/null 2>&1; then \
+			npx http-server -p $(SWAGGER_PORT) . & echo $$! > swagger.pid; \
+			echo "Swagger UI started with http-server (PID: $$(cat swagger.pid))"; \
+		else \
+			echo "WARNING: Could not start Swagger UI. Please install Python or Node.js."; \
+		fi; \
+	fi
+	@sleep 2
+	
+	@echo "Building and starting Phoenix Wallet API..."
+	@go build -o ./phoenix-wallet-api
+	@FLOW_WALLET_LIGHTWEIGHT_MODE=true \
+	FLOW_WALLET_ACCESS_API_HOST=localhost:$(EMULATOR_PORT) \
+	FLOW_WALLET_CHAIN_ID=flow-emulator \
+	FLOW_WALLET_DATABASE_DSN=./data/wallet.db \
+	./phoenix-wallet-api & echo $$! > api.pid
+	@echo "Phoenix Wallet API started with PID: $$(cat api.pid)"
+	
+	@echo "All services started successfully!"
+	@echo "API: http://localhost:$(API_PORT)"
+	@echo "Swagger UI: http://localhost:$(SWAGGER_PORT)"
+	@echo "Flow Emulator: localhost:$(EMULATOR_PORT)"
+	@$(OPEN_CMD) http://localhost:$(SWAGGER_PORT)
+
+.PHONY: local-stop
+local-stop:
+	@echo "Stopping all Phoenix Wallet API services..."
+	@if [ -f emulator.pid ]; then kill $$(cat emulator.pid) && rm emulator.pid && echo "Flow Emulator stopped"; else echo "Flow Emulator not running"; fi
+	@if [ -f swagger.pid ]; then kill $$(cat swagger.pid) && rm swagger.pid && echo "Swagger UI stopped"; else echo "Swagger UI not running"; fi
+	@if [ -f api.pid ]; then kill $$(cat api.pid) && rm api.pid && echo "Phoenix Wallet API stopped"; else echo "Phoenix Wallet API not running"; fi
+	@echo "All services stopped successfully!"
+
+.PHONY: local-status
+local-status:
+	@echo "Checking status of Phoenix Wallet API services..."
+	@if [ -f emulator.pid ] && ps -p $$(cat emulator.pid) > /dev/null; then echo "Flow Emulator: Running (PID: $$(cat emulator.pid))"; else echo "Flow Emulator: Not running"; fi
+	@if [ -f swagger.pid ] && ps -p $$(cat swagger.pid) > /dev/null; then echo "Swagger UI: Running (PID: $$(cat swagger.pid))"; else echo "Swagger UI: Not running"; fi
+	@if [ -f api.pid ] && ps -p $$(cat api.pid) > /dev/null; then echo "Phoenix Wallet API: Running (PID: $$(cat api.pid))"; else echo "Phoenix Wallet API: Not running"; fi
