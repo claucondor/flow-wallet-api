@@ -1,0 +1,142 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #00d4aa;
+  --ifm-color-primary-dark: #00bf9a;
+  --ifm-color-primary-darker: #00b591;
+  --ifm-color-primary-darkest: #009577;
+  --ifm-color-primary-light: #00e9ba;
+  --ifm-color-primary-lighter: #00f3c3;
+  --ifm-color-primary-lightest: #1affdd;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #25c2a0;
+  --ifm-color-primary-dark: #21af90;
+  --ifm-color-primary-darker: #1fa588;
+  --ifm-color-primary-darkest: #1a8870;
+  --ifm-color-primary-light: #29d5b0;
+  --ifm-color-primary-lighter: #32d8b4;
+  --ifm-color-primary-lightest: #4fddbf;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Custom styles for Phoenix Wallet API */
+.hero--primary {
+  background: linear-gradient(135deg, #00d4aa 0%, #25c2a0 100%);
+}
+
+.hero__title {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.hero__subtitle {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+/* Code blocks */
+.prism-code {
+  font-size: 14px;
+}
+
+/* Mermaid diagrams */
+.mermaid {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+/* Custom admonitions */
+.admonition {
+  margin: 1.5rem 0;
+}
+
+/* API endpoint styling */
+.api-endpoint {
+  background: var(--ifm-code-background);
+  border-left: 4px solid var(--ifm-color-primary);
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 4px;
+}
+
+.api-method {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.api-method--get {
+  background: #61affe;
+  color: white;
+}
+
+.api-method--post {
+  background: #49cc90;
+  color: white;
+}
+
+.api-method--put {
+  background: #fca130;
+  color: white;
+}
+
+.api-method--delete {
+  background: #f93e3e;
+  color: white;
+}
+
+/* Feature cards */
+.feature-card {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  transition: box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card h3 {
+  color: var(--ifm-color-primary);
+  margin-bottom: 1rem;
+}
+
+/* Network badges */
+.network-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0.25rem;
+}
+
+.network-badge--emulator {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.network-badge--testnet {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.network-badge--mainnet {
+  background: #e8f5e8;
+  color: #2e7d32;
+}

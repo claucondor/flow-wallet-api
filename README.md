@@ -92,7 +92,8 @@ make lightweight
 
 The lightweight mode:
 - Uses SQLite instead of PostgreSQL
-- Disables the idempotency middleware (no Redis dependency)
+- Disables the idempotency middleware by default (no Redis dependency)
+- Optionally enables idempotency using SQLite storage
 - Optimizes worker settings for lighter usage
 - Stores data in a persistent volume
 - Includes Swagger UI for API exploration and testing
@@ -365,26 +366,106 @@ FLOW_WALLET_LIGHTWEIGHT_MODE=true
 When lightweight mode is enabled, the following configurations are automatically applied:
 
 - SQLite is used as the database backend (regardless of `DATABASE_TYPE` setting)
-- Idempotency middleware is disabled (no Redis dependency)
+- Idempotency middleware is disabled by default (no Redis dependency)
 - Worker settings are optimized for lighter usage
 - Data is stored in `./data/wallet-lightweight.db` by default
+
+#### Optional Idempotency in Lightweight Mode
+
+You can optionally enable idempotency in lightweight mode using SQLite storage:
+
+```
+FLOW_WALLET_LIGHTWEIGHT_MODE=true
+FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY=true
+```
+
+When `FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY=true`:
+- Idempotency keys are stored in the same SQLite database
+- Prevents duplicate operations without requiring Redis
+- Ideal for production deployments that need transaction safety
+- Data persists across container restarts
 
 This mode is ideal for:
 - Development environments
 - Testing and CI/CD pipelines
 - Small-scale production deployments
 - Situations where setting up PostgreSQL and Redis is impractical
+- Production deployments requiring transaction idempotency without Redis
 
-To use lightweight mode with Docker Compose:
+#### Deployment Options
 
+**Local Development (Flow Emulator):**
 ```sh
-docker-compose -f docker-compose.lightweight.yml up -d
+# Standard lightweight mode (no idempotency)
+make lightweight
+
+# With idempotency enabled
+make lightweight-idempotent
 ```
+
+**Flow Testnet:**
+```sh
+# Connect to Flow Testnet (no idempotency)
+make lightweight-testnet
+
+# Connect to Flow Testnet with idempotency
+make lightweight-testnet-idempotent
+```
+
+**Flow Mainnet:**
+```sh
+# Connect to Flow Mainnet (no idempotency)
+make lightweight-mainnet
+
+# Connect to Flow Mainnet with idempotency
+make lightweight-mainnet-idempotent
+```
+
+**Manual Docker Compose:**
+```sh
+# Local with emulator
+docker compose -f docker-compose.lightweight.yml up -d
+
+# Testnet
+docker compose -f docker-compose.lightweight-testnet.yml up -d
+
+# Mainnet
+docker compose -f docker-compose.lightweight-mainnet.yml up -d
+
+# With idempotency (any network)
+FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY=true docker compose -f [compose-file] up -d
+```
+
+#### Important Configuration for Testnet/Mainnet
+
+When using testnet or mainnet, you **MUST** configure proper admin account credentials:
+
+**For Testnet:**
+1. Create an account on Flow Testnet (using Flow CLI or faucet)
+2. Update your `.env` file:
+```env
+FLOW_WALLET_ADMIN_ADDRESS=0x[your-testnet-address]
+FLOW_WALLET_ADMIN_PRIVATE_KEY=[your-testnet-private-key]
+```
+
+**For Mainnet:**
+1. Create an account on Flow Mainnet with sufficient FLOW balance
+2. Update your `.env` file:
+```env
+FLOW_WALLET_ADMIN_ADDRESS=0x[your-mainnet-address]
+FLOW_WALLET_ADMIN_PRIVATE_KEY=[your-mainnet-private-key]
+```
+
+⚠️ **Security Warning for Mainnet:**
+- Use proper key management (consider Google KMS or AWS KMS)
+- Never commit private keys to version control
+- Use environment variables or secure key storage
+- Test thoroughly on testnet before mainnet deployment
 
 **Limitations of lightweight mode:**
 - Lower throughput for high-volume transaction processing
-- No support for idempotent API requests
 - Limited scalability (not suitable for multi-instance deployments)
+- When idempotency is disabled: No protection against duplicate operations
 
 ### All possible configuration variables
 

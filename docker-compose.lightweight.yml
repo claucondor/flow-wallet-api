@@ -8,27 +8,17 @@ volumes:
   wallet-data:
 
 services:
-  swagger-ui:
-    image: swaggerapi/swagger-ui
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
     ports:
-      - "8081:8080"
+      - "8080:3000"
     environment:
-      SWAGGER_JSON: /openapi.yml
-      # Configuraciones funcionales que mejoran la experiencia
-      DEEP_LINKING: "true"
-      DISPLAY_OPERATION_ID: "true"
-      DEFAULT_MODELS_EXPAND_DEPTH: 1
-      DEFAULT_MODEL_EXPAND_DEPTH: 1
-      DISPLAY_REQUEST_DURATION: "true"
-      DOC_EXPANSION: "list"
-      FILTER: "true"
-      SHOW_EXTENSIONS: "true"
-      SHOW_COMMON_EXTENSIONS: "true"
-      TRY_IT_OUT_ENABLED: "true"
-    volumes:
-      - ./openapi.yml:/openapi.yml
+      NODE_ENV: production
     networks:
       - private
+    restart: unless-stopped
 
   emulator:
     image: gcr.io/flow-container-registry/emulator:latest
@@ -68,6 +58,8 @@ services:
       FLOW_WALLET_CHAIN_ID: flow-emulator
       # Cambiamos la ruta de la base de datos para que sea accesible
       FLOW_WALLET_DATABASE_DSN: "/app/data/wallet.db"
+      # Opcional: Habilitar idempotencia en modo lightweight (por defecto false)
+      FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY: "${FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY:-false}"
     # Añadimos un comando para asegurarnos de que el directorio existe y esperamos a que el emulador esté listo
     command: sh -c "mkdir -p /app/data && sleep 5 && /main"
     depends_on:

@@ -1,0 +1,49 @@
+### Phoenix Wallet API - Idempotency Examples
+### These examples show how to use idempotency in lightweight mode
+
+### 1. Create account with idempotency key (first time)
+POST http://localhost:3000/v1/accounts
+Content-Type: application/json
+Idempotency-Key: test-account-creation-001
+
+{}
+
+### 2. Try to create account again with same idempotency key (should return 409 Conflict)
+POST http://localhost:3000/v1/accounts
+Content-Type: application/json
+Idempotency-Key: test-account-creation-001
+
+{}
+
+### 3. Create account with different idempotency key (should work)
+POST http://localhost:3000/v1/accounts
+Content-Type: application/json
+Idempotency-Key: test-account-creation-002
+
+{}
+
+### 4. Transfer tokens with idempotency (replace ADDRESS with actual account address)
+POST http://localhost:3000/v1/accounts/ADDRESS/fungible-tokens/FlowToken/withdrawals
+Content-Type: application/json
+Idempotency-Key: test-transfer-001
+
+{
+  "recipient": "0xf8d6e0586b0a20c7",
+  "amount": "1.0"
+}
+
+### 5. Try same transfer again (should return 409 Conflict)
+POST http://localhost:3000/v1/accounts/ADDRESS/fungible-tokens/FlowToken/withdrawals
+Content-Type: application/json
+Idempotency-Key: test-transfer-001
+
+{
+  "recipient": "0xf8d6e0586b0a20c7",
+  "amount": "1.0"
+}
+
+### 6. Example without idempotency key (should return 400 Bad Request if idempotency is enabled)
+POST http://localhost:3000/v1/accounts
+Content-Type: application/json
+
+{}

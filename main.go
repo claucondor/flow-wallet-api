@@ -81,8 +81,15 @@ func runServer(cfg *configs.Config) {
 			cfg.DatabaseDSN = "./data/wallet-lightweight.db"
 		}
 		
-		// Disable idempotency middleware to remove Redis dependency
-		cfg.DisableIdempotencyMiddleware = true
+		// Configure idempotency for lightweight mode
+		if cfg.LightweightIdempotency {
+			log.Info("Lightweight mode: Enabling idempotency with SQLite storage")
+			cfg.DisableIdempotencyMiddleware = false
+			cfg.IdempotencyMiddlewareDatabaseType = "shared" // Use same SQLite DB
+		} else {
+			log.Info("Lightweight mode: Disabling idempotency middleware")
+			cfg.DisableIdempotencyMiddleware = true
+		}
 		
 		// Optimize worker settings for lighter usage
 		if cfg.WorkerCount > 4 {

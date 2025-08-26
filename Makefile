@@ -28,6 +28,8 @@ endif
 
 dev = $(DOCKER_COMPOSE_CMD) -f docker-compose.dev.yml -p flow-wallet-api-dev
 lightweight = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight.yml -p flow-wallet-api-lightweight
+lightweight-testnet = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight-testnet.yml -p flow-wallet-api-lightweight-testnet
+lightweight-mainnet = $(DOCKER_COMPOSE_CMD) -f docker-compose.lightweight-mainnet.yml -p flow-wallet-api-lightweight-mainnet
 test-suite = $(DOCKER_COMPOSE_CMD) -f docker-compose.test-suite.yml -p flow-wallet-api-test
 
 .PHONY: dev
@@ -65,6 +67,174 @@ lightweight-down:
 
 .PHONY: lightweight-reset
 lightweight-reset: lightweight-down lightweight
+
+.PHONY: lightweight-idempotent
+lightweight-idempotent:
+	@echo "🚀 Starting Phoenix Wallet API in lightweight mode with idempotency enabled"
+	@$(lightweight) down --remove-orphans || true
+	@$(lightweight) build api
+	@FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY=true $(lightweight) up -d
+	@echo "✅ Services started with idempotency enabled"
+	@echo "📋 Available endpoints:"
+	@echo "   🌐 API: http://localhost:3000/v1"
+	@echo "   📚 Documentation: http://localhost:8080"
+	@echo "🔑 Idempotency is ENABLED - use 'Idempotency-Key' header in POST requests"
+
+# Testnet commands
+.PHONY: lightweight-testnet
+lightweight-testnet:
+	@echo "🌐 Starting Phoenix Wallet API in lightweight mode (Flow Testnet)"
+	@$(lightweight-testnet) down --remove-orphans || true
+	@$(lightweight-testnet) build api
+	@$(lightweight-testnet) up -d
+	@echo "✅ Services started on Flow Testnet"
+	@echo "📋 Available endpoints:"
+	@echo "   🌐 API: http://localhost:3000/v1"
+	@echo "   📚 Documentation: http://localhost:8080"
+	@echo "   🔗 Network: Flow Testnet"
+
+.PHONY: lightweight-testnet-idempotent
+lightweight-testnet-idempotent:
+	@echo "🌐 Starting Phoenix Wallet API in lightweight mode (Flow Testnet) with idempotency"
+	@$(lightweight-testnet) down --remove-orphans || true
+	@$(lightweight-testnet) build api
+	@FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY=true $(lightweight-testnet) up -d
+	@echo "✅ Services started on Flow Testnet with idempotency enabled"
+	@echo "📋 Available endpoints:"
+	@echo "   🌐 API: http://localhost:3000/v1"
+	@echo "   📚 Documentation: http://localhost:8080"
+	@echo "   🔗 Network: Flow Testnet"
+	@echo "🔑 Idempotency is ENABLED - use 'Idempotency-Key' header in POST requests"
+
+.PHONY: lightweight-testnet-stop
+lightweight-testnet-stop:
+	@$(lightweight-testnet) stop
+
+.PHONY: lightweight-testnet-down
+lightweight-testnet-down:
+	@$(lightweight-testnet) down --remove-orphans
+
+.PHONY: lightweight-testnet-logs
+lightweight-testnet-logs:
+	@$(lightweight-testnet) logs -f
+
+# Mainnet commands
+.PHONY: lightweight-mainnet
+lightweight-mainnet:
+	@echo "🏦 Starting Phoenix Wallet API in lightweight mode (Flow Mainnet)"
+	@echo "⚠️  WARNING: You are connecting to MAINNET - real funds will be used!"
+	@$(lightweight-mainnet) down --remove-orphans || true
+	@$(lightweight-mainnet) build api
+	@$(lightweight-mainnet) up -d
+	@echo "✅ Services started on Flow Mainnet"
+	@echo "📋 Available endpoints:"
+	@echo "   🌐 API: http://localhost:3000/v1"
+	@echo "   📚 Documentation: http://localhost:8080"
+	@echo "   🔗 Network: Flow Mainnet"
+	@echo "⚠️  CAUTION: This is MAINNET - real transactions will cost real FLOW!"
+
+.PHONY: lightweight-mainnet-idempotent
+lightweight-mainnet-idempotent:
+	@echo "🏦 Starting Phoenix Wallet API in lightweight mode (Flow Mainnet) with idempotency"
+	@echo "⚠️  WARNING: You are connecting to MAINNET - real funds will be used!"
+	@$(lightweight-mainnet) down --remove-orphans || true
+	@$(lightweight-mainnet) build api
+	@FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY=true $(lightweight-mainnet) up -d
+	@echo "✅ Services started on Flow Mainnet with idempotency enabled"
+	@echo "📋 Available endpoints:"
+	@echo "   🌐 API: http://localhost:3000/v1"
+	@echo "   📚 Documentation: http://localhost:8080"
+	@echo "   🔗 Network: Flow Mainnet"
+	@echo "🔑 Idempotency is ENABLED - use 'Idempotency-Key' header in POST requests"
+	@echo "⚠️  CAUTION: This is MAINNET - real transactions will cost real FLOW!"
+
+.PHONY: lightweight-mainnet-stop
+lightweight-mainnet-stop:
+	@$(lightweight-mainnet) stop
+
+.PHONY: lightweight-mainnet-down
+lightweight-mainnet-down:
+	@$(lightweight-mainnet) down --remove-orphans
+
+.PHONY: lightweight-mainnet-logs
+lightweight-mainnet-logs:
+	@$(lightweight-mainnet) logs -f
+
+# Help command
+.PHONY: help
+help:
+	@echo "🚀 Phoenix Wallet API - Available Commands"
+	@echo "=========================================="
+	@echo ""
+	@echo "📦 Standard Development:"
+	@echo "  make dev                    - Start full stack (PostgreSQL + Redis + Emulator)"
+	@echo "  make stop                   - Stop development services"
+	@echo "  make down                   - Stop and remove development containers"
+	@echo "  make reset                  - Reset development environment"
+	@echo ""
+	@echo "🪶 Lightweight Mode (Local Emulator):"
+	@echo "  make lightweight            - Start lightweight mode (SQLite, no idempotency)"
+	@echo "  make lightweight-idempotent - Start lightweight mode with idempotency"
+	@echo "  make lightweight-stop       - Stop lightweight services"
+	@echo "  make lightweight-down       - Stop and remove lightweight containers"
+	@echo "  make lightweight-logs       - View lightweight logs"
+	@echo ""
+	@echo "🌐 Lightweight Mode (Flow Testnet):"
+	@echo "  make lightweight-testnet            - Connect to Flow Testnet"
+	@echo "  make lightweight-testnet-idempotent - Connect to Flow Testnet with idempotency"
+	@echo "  make lightweight-testnet-stop       - Stop testnet services"
+	@echo "  make lightweight-testnet-down       - Stop and remove testnet containers"
+	@echo "  make lightweight-testnet-logs       - View testnet logs"
+	@echo ""
+	@echo "🏦 Lightweight Mode (Flow Mainnet):"
+	@echo "  make lightweight-mainnet            - Connect to Flow Mainnet ⚠️"
+	@echo "  make lightweight-mainnet-idempotent - Connect to Flow Mainnet with idempotency ⚠️"
+	@echo "  make lightweight-mainnet-stop       - Stop mainnet services"
+	@echo "  make lightweight-mainnet-down       - Stop and remove mainnet containers"
+	@echo "  make lightweight-mainnet-logs       - View mainnet logs"
+	@echo ""
+	@echo "🧪 Testing:"
+	@echo "  make test                   - Run tests with emulator"
+	@echo "  make run-tests              - Run tests only"
+	@echo "  make test-clean             - Clean test cache and run tests"
+	@echo "  make run-test-suite         - Run full dockerized test suite"
+	@echo "  make stop-test-suite        - Stop test suite containers"
+	@echo ""
+	@echo "🔧 Local Development (No Docker):"
+	@echo "  make local-start            - Start services locally"
+	@echo "  make local-stop             - Stop local services"
+	@echo "  make local-status           - Check local services status"
+	@echo ""
+	@echo "⚠️  Important Notes:"
+	@echo "  - For testnet/mainnet: Configure FLOW_WALLET_ADMIN_ADDRESS and FLOW_WALLET_ADMIN_PRIVATE_KEY"
+	@echo "  - Mainnet commands use real FLOW tokens - test on testnet first!"
+	@echo "  - Idempotency prevents duplicate operations using 'Idempotency-Key' header"
+	@echo ""
+	@echo "📚 Endpoints (when running):"
+	@echo "  - API: http://localhost:3000/v1"
+	@echo "  - Documentation: http://localhost:8080"
+	@echo "  - Flow Emulator: localhost:3569 (local only)"
+	@echo ""
+	@echo "📖 Documentation Commands:"
+	@echo "  make docs-dev             - Start documentation in development mode"
+	@echo "  make docs-build           - Build documentation for production"
+	@echo "  make docs-serve           - Serve built documentation locally"
+
+# Documentation commands
+.PHONY: docs-dev
+docs-dev:
+	@echo "🚀 Starting documentation in development mode..."
+	@cd docs && npm install && npm start
+
+.PHONY: docs-build
+docs-build:
+	@echo "🏗️  Building documentation for production..."
+	@cd docs && npm install && npm run build
+
+.PHONY: docs-serve
+docs-serve:
+	@echo "📚 Serving built documentation..."
+	@cd docs && npm run serve
 
 .PHONY: run-tests
 run-tests: check-go

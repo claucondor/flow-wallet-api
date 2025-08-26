@@ -25,6 +25,9 @@ type Config struct {
 	// When enabled, it disables idempotency middleware and optimizes worker settings
 	// but keeps PostgreSQL for persistence
 	QuaveMode bool `env:"QUAVE_MODE" envDefault:"false"`
+	// LightweightIdempotency enables idempotency in lightweight mode using SQLite
+	// Only takes effect when LightweightMode is true
+	LightweightIdempotency bool `env:"LIGHTWEIGHT_IDEMPOTENCY" envDefault:"false"`
 
 	// -- Logger config --
 	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`

@@ -1,0 +1,46 @@
+version: "3.9"
+
+networks:
+  private:
+
+volumes:
+  wallet-data:
+
+services:
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    ports:
+      - "8080:3000"
+    environment:
+      NODE_ENV: production
+    networks:
+      - private
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
+      target: dist
+      network: host
+    networks:
+      - private
+    ports:
+      - "3000:3000"
+    volumes:
+      - wallet-data:/app/data
+    env_file:
+      - ./.env
+    environment:
+      FLOW_WALLET_LIGHTWEIGHT_MODE: "true"
+      # Testnet configuration
+      FLOW_WALLET_ACCESS_API_HOST: access.testnet.nodes.onflow.org:9000
+      FLOW_WALLET_CHAIN_ID: flow-testnet
+      # Database configuration
+      FLOW_WALLET_DATABASE_DSN: "/app/data/wallet-testnet.db"
+      # Optional: Enable idempotency in lightweight mode
+      FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY: "${FLOW_WALLET_LIGHTWEIGHT_IDEMPOTENCY:-false}"
+    command: sh -c "mkdir -p /app/data && /main"
+    restart: on-failure:3
