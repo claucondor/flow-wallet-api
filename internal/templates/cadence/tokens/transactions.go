@@ -2,11 +2,11 @@ package tokens
 
 // GenericFungibleTransfer transfers fungible tokens between accounts
 const GenericFungibleTransfer = `
-import FungibleToken from "./FungibleToken.cdc"
+import FungibleToken from 0x9a0766d93b6608b7
 import TOKEN_DECLARATION_NAME from TOKEN_ADDRESS
 
 transaction(amount: UFix64, recipient: Address) {
-  let sentVault: @FungibleToken.Vault
+  let sentVault: @{FungibleToken.Vault}
 
   prepare(signer: auth(Storage, FungibleToken.Withdraw) &Account) {
     let vaultRef = signer.storage
@@ -19,7 +19,7 @@ transaction(amount: UFix64, recipient: Address) {
   execute {
     let receiverRef = getAccount(recipient)
       .capabilities
-      .borrow<&TOKEN_DECLARATION_NAME.Vault & FungibleToken.Receiver>(TOKEN_RECEIVER)
+      .borrow<&{FungibleToken.Receiver}>(TOKEN_RECEIVER)
       ?? panic("failed to borrow reference to recipient vault")
 
     receiverRef.deposit(from: <-self.sentVault)
@@ -29,7 +29,7 @@ transaction(amount: UFix64, recipient: Address) {
 
 // GenericFungibleSetup sets up a fungible token vault for an account
 const GenericFungibleSetup = `
-import FungibleToken from "./FungibleToken.cdc"
+import FungibleToken from 0x9a0766d93b6608b7
 import TOKEN_DECLARATION_NAME from TOKEN_ADDRESS
 
 transaction {
@@ -52,12 +52,12 @@ transaction {
 
     signer.storage.save(<-vault!, to: TOKEN_VAULT)
 
-    let cap = signer.capabilities.storage.issue<&TOKEN_DECLARATION_NAME.Vault & FungibleToken.Receiver>(
+    let cap = signer.capabilities.storage.issue<&{FungibleToken.Receiver}>(
       TOKEN_VAULT
     )
     signer.capabilities.publish(cap, at: TOKEN_RECEIVER)
 
-    let balanceCap = signer.capabilities.storage.issue<&TOKEN_DECLARATION_NAME.Vault & FungibleToken.Balance>(
+    let balanceCap = signer.capabilities.storage.issue<&{FungibleToken.Balance}>(
       TOKEN_VAULT
     )
     signer.capabilities.publish(balanceCap, at: TOKEN_BALANCE)
