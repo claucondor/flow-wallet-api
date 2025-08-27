@@ -144,8 +144,11 @@ flow/flowdb
 bin/
 /bin/*
 *.exe
+# Only ignore compiled binaries in cmd/, not source files
 /cmd/*/main
-/cmd/*/*
+/cmd/api/api
+/cmd/api-v2/api-v2
+/cmd/admin/admin
 
 # Docker and deployment
 docker-compose.override.yml

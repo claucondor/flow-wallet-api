@@ -1,0 +1,59 @@
+# ==============================================================================
+# Flow Wallet API - Testnet Docker Configuration
+# ==============================================================================
+
+FROM golang:1.23.7-alpine AS builder
+
+RUN apk update && apk add --no-cache \
+    ca-certificates \
+    musl-dev \
+    gcc \
+    build-base \
+    git \
+    bash
+
+ENV GO111MODULE=on \
+    CGO_ENABLED=1 \
+    GOOS=linux \
+    GOARCH=amd64
+
+WORKDIR /build
+
+# Cache dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build API
+RUN go build -ldflags="-w -s" -o bin/api ./cmd/api
+
+# ==============================================================================
+# Production Runtime
+# ==============================================================================
+FROM alpine:latest
+
+RUN apk --no-cache add \
+    ca-certificates \
+    tzdata \
+    curl \
+    bash
+
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S app && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G app -g app app
+
+USER app
+
+COPY --from=builder --chown=app:app /build/bin/api /app/
+COPY --from=builder --chown=app:app /build/flow/ /app/flow/
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000/v1/health/ready || exit 1
+
+CMD ["./api"]

@@ -1,0 +1,53 @@
+# ==============================================================================
+# Flow Wallet API - Testnet Configuration
+# Usage: docker-compose up -d
+# ==============================================================================
+
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: cmd/api/Dockerfile
+    container_name: flow-wallet-api-testnet
+    ports:
+      - "3000:3000"
+    environment:
+      # Network - Testnet
+      - FLOW_WALLET_ACCESS_API_HOST=access.testnet.nodes.onflow.org:9000
+      - FLOW_WALLET_CHAIN_ID=flow-testnet
+      
+      # Admin Account
+      - FLOW_WALLET_ADMIN_ADDRESS=0xe6ddfc62f8ec2020
+      - FLOW_WALLET_ADMIN_PRIVATE_KEY=1cf49f7f4971acb060223272b903126288b7067b65ce213358d90e08caf9c3d0
+      - FLOW_WALLET_ENCRYPTION_KEY=faae4ed1c30f4e4555ee3a71f1044a8e
+      - FLOW_WALLET_ENCRYPTION_KEY_TYPE=local
+      
+      # Database - Supabase PostgreSQL
+      - FLOW_WALLET_DATABASE_TYPE=psql
+      - FLOW_WALLET_DATABASE_DSN=postgresql://postgres.vdivfoiiopgpmwjastpd:81290123@aws-1-us-east-2.pooler.supabase.com:6543/postgres
+      
+      # Tokens - Testnet FlowToken
+      - FLOW_WALLET_ENABLED_TOKENS=FlowToken:0x7e60df042a9c0868:flowToken
+      
+      # Mode Configuration
+      - FLOW_WALLET_LIGHTWEIGHT_MODE=true
+      - FLOW_WALLET_DISABLE_IDEMPOTENCY_MIDDLEWARE=true
+      
+      # Logging
+      - FLOW_WALLET_LOG_LEVEL=debug
+      
+      # Other settings
+      - FLOW_WALLET_DEFAULT_KEY_TYPE=local
+      - FLOW_WALLET_ADMIN_PROPOSAL_KEY_COUNT=1
+      - INIT_FUNGIBLE_TOKEN_VAULTS_ON_ACCOUNT_CREATION=true
+
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/v1/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
