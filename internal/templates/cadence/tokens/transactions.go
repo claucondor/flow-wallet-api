@@ -10,7 +10,7 @@ transaction(amount: UFix64, recipient: Address) {
 
   prepare(signer: auth(Storage, FungibleToken.Withdraw) &Account) {
     let vaultRef = signer.storage
-      .borrow<&TOKEN_DECLARATION_NAME.Vault>(from: TOKEN_VAULT)
+      .borrow<auth(FungibleToken.Withdraw) &TOKEN_DECLARATION_NAME.Vault>(from: TOKEN_VAULT)
       ?? panic("failed to borrow reference to sender vault")
 
     self.sentVault <- vaultRef.withdraw(amount: amount)
