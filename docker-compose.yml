@@ -139,11 +139,11 @@ services:
     ports:
       - "${API_PORT:-3000}:3000"
     environment:
-      # SQLite mode
-      - FLOW_WALLET_LIGHTWEIGHT_MODE=true
-      - FLOW_WALLET_DATABASE_TYPE=sqlite
-      - FLOW_WALLET_DATABASE_DSN=/data/wallet.db
-      - FLOW_WALLET_DISABLE_IDEMPOTENCY_MIDDLEWARE=true
+      # Lightweight mode with configurable database
+      - FLOW_WALLET_LIGHTWEIGHT_MODE=${LIGHTWEIGHT_MODE:-true}
+      - FLOW_WALLET_DATABASE_TYPE=${DATABASE_TYPE:-sqlite}
+      - FLOW_WALLET_DATABASE_DSN=${DATABASE_DSN:-/data/wallet.db}
+      - FLOW_WALLET_DISABLE_IDEMPOTENCY_MIDDLEWARE=${DISABLE_IDEMPOTENCY:-true}
       # Flow
       - FLOW_WALLET_ACCESS_API_HOST=${ACCESS_API_HOST:-emulator:3569}
       - FLOW_WALLET_CHAIN_ID=${CHAIN_ID:-flow-emulator}

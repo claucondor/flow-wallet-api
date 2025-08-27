@@ -74,18 +74,20 @@ func runServer(cfg *configs.Config) {
 	if cfg.LightweightMode {
 		log.Info("Running in lightweight mode with simplified dependencies")
 		
-		// Force SQLite as database
-		cfg.DatabaseType = "sqlite"
-		if cfg.DatabaseDSN == "" || cfg.DatabaseDSN == "wallet.db" {
+		// Configure database defaults for lightweight mode if not explicitly set
+		if cfg.DatabaseType == "" {
+			cfg.DatabaseType = "sqlite" // Default to SQLite if no type specified
+		}
+		if cfg.DatabaseType == "sqlite" && (cfg.DatabaseDSN == "" || cfg.DatabaseDSN == "wallet.db") {
 			// Use a more explicit path for the SQLite database in lightweight mode
 			cfg.DatabaseDSN = "./data/wallet-lightweight.db"
 		}
 		
 		// Configure idempotency for lightweight mode
 		if cfg.LightweightIdempotency {
-			log.Info("Lightweight mode: Enabling idempotency with SQLite storage")
+			log.Info("Lightweight mode: Enabling idempotency with shared database storage")
 			cfg.DisableIdempotencyMiddleware = false
-			cfg.IdempotencyMiddlewareDatabaseType = "shared" // Use same SQLite DB
+			cfg.IdempotencyMiddlewareDatabaseType = "shared" // Use same database as main app
 		} else {
 			log.Info("Lightweight mode: Disabling idempotency middleware")
 			cfg.DisableIdempotencyMiddleware = true
