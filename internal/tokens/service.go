@@ -332,6 +332,15 @@ func (s *ServiceImpl) GetDeposit(address, tokenName, transactionId string) (*Tok
 
 // RegisterDeposit is an internal API for registering token deposits from on-chain events.
 func (s *ServiceImpl) RegisterDeposit(ctx context.Context, token *templates.Token, transactionId flow.Identifier, recipient accounts.Account, amountOrNftID string) error {
+	log.
+		WithFields(log.Fields{
+			"token":       token.Name,
+			"txId":        transactionId.Hex(),
+			"recipient":   recipient.Address,
+			"amount":      amountOrNftID,
+		}).
+		Info("RegisterDeposit called")
+
 	var (
 		ftAmount string
 		nftId    uint64
@@ -344,6 +353,7 @@ func (s *ServiceImpl) RegisterDeposit(ctx context.Context, token *templates.Toke
 		var err error
 		nftId, err = strconv.ParseUint(amountOrNftID, 10, 64)
 		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Warn("Failed to parse NFT ID")
 			return err
 		}
 	default:
@@ -353,24 +363,31 @@ func (s *ServiceImpl) RegisterDeposit(ctx context.Context, token *templates.Toke
 	// TODO (latenssi): db lock for transaction; could it also allow "syncing" when running multiple instances?
 
 	// Get existing transaction or create one
+	log.Debug("Getting or creating transaction record")
 	transaction := s.transactions.GetOrCreateTransaction(transactionId.Hex())
+
+	log.Debug("Fetching transaction from Flow network")
 	flowTx, err := s.fc.GetTransaction(ctx, transactionId)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Warn("Failed to fetch transaction from Flow")
 		return err
 	}
 
 	if transaction.TransactionType == transactions.Unknown {
 		// Transaction was just created
 		// Transfer most likely did not originate in this wallet service
+		log.Debug("Updating transaction type to FtTransfer")
 		transaction.TransactionType = transactions.FtTransfer
 		transaction.ProposerAddress = flow_helpers.FormatAddress(flowTx.ProposalKey.Address)
 		if err := s.transactions.UpdateTransaction(transaction); err != nil {
+			log.WithFields(log.Fields{"error": err}).Warn("Failed to update transaction")
 			return err
 		}
 	}
 
 	// Make sure the token is enabled in the database for the recipient account
 	// We are registering a deposit event, so the token must be setup already for the recipient
+	log.Debug("Inserting account token record")
 	err = s.store.InsertAccountToken(&AccountToken{
 		AccountAddress: recipient.Address,
 		TokenAddress:   token.Address,
@@ -378,22 +395,28 @@ func (s *ServiceImpl) RegisterDeposit(ctx context.Context, token *templates.Toke
 		TokenType:      token.Type,
 	})
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Warn("Failed to insert account token")
 		return err
 	}
 
 	// Check for existing deposit
+	log.Debug("Checking for existing deposit")
 	if _, err := s.store.TokenDeposit(recipient.Address, transaction.TransactionId, token); err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			// Error did not contain "record not found"
+			log.WithFields(log.Fields{"error": err}).Warn("Error checking for existing deposit")
 			return err
 		}
 		// Error contains "record not found", proceed
+		log.Debug("No existing deposit found, will create new one")
 	} else {
 		// err == nil, existing deposit found, we are done
+		log.Info("Deposit already exists, skipping")
 		return nil
 	}
 
 	// Create and store a new token transfer
+	log.Debug("Creating token transfer record")
 	transfer := &TokenTransfer{
 		TransactionId:    transaction.TransactionId,
 		RecipientAddress: recipient.Address,
@@ -403,10 +426,16 @@ func (s *ServiceImpl) RegisterDeposit(ctx context.Context, token *templates.Toke
 		TokenName:        token.Name,
 	}
 
+	log.WithFields(log.Fields{
+		"transfer": transfer,
+	}).Debug("Inserting token transfer")
+
 	if err := s.store.InsertTokenTransfer(transfer); err != nil {
+		log.WithFields(log.Fields{"error": err}).Warn("Failed to insert token transfer")
 		return err
 	}
 
+	log.Info("Deposit registered successfully")
 	return nil
 }
 

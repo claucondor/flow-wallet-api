@@ -160,6 +160,11 @@ func (l *ListenerImpl) Start() Listener {
 					if latestBlock.Height > status.LatestHeight {
 						start := status.LatestHeight + 1                  // LatestHeight has already been checked, add 1
 						end := min(latestBlock.Height, start+l.maxBlocks) // Limit maximum end
+						entry.WithFields(log.Fields{
+							"start": start,
+							"end":   end,
+							"latest": latestBlock.Height,
+						}).Info("Processing blocks")
 						if err := l.run(ctx, start, end); err != nil {
 							return err
 						}

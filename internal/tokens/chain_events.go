@@ -45,6 +45,16 @@ func (h *ChainEventHandler) handleDeposit(ctx context.Context, event flow.Event)
 	}
 	accountAddress := event.Value.SearchFieldByName("to")
 
+	// DEBUG: Log ALL deposit events
+	log.
+		WithFields(log.Fields{
+			"event":   event.Type,
+			"to":      accountAddress,
+			"amount":  amountOrNftID,
+			"txId":    event.TransactionID,
+		}).
+		Info("Deposit event detected")
+
 	if amountOrNftID == nil || accountAddress == nil {
 		log.WithField("event", event.Type).Warn("Could not find required fields in event")
 		return
@@ -53,6 +63,13 @@ func (h *ChainEventHandler) handleDeposit(ctx context.Context, event flow.Event)
 	// Get the target account from database
 	account, err := h.AccountService.Details(flow_helpers.HexString(accountAddress.String()))
 	if err != nil {
+		log.
+			WithFields(log.Fields{
+				"error":   err,
+				"address": accountAddress,
+				"event":   event.Type,
+			}).
+			Warn("Could not get account for deposit event")
 		return
 	}
 
