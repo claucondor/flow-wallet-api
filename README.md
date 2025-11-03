@@ -19,6 +19,88 @@ This service can be used by applications that need to manage Flow user accounts 
 
 View full list of functionality in the [API documentation](https://flow-hydraulics.github.io/flow-wallet-api/).
 
+## Quick Start
+
+Get up and running in 5 minutes with lightweight mode (no PostgreSQL, no Redis required):
+
+### 1. Clone and Setup
+
+```bash
+git clone https://github.com/claucondor/flow-wallet-api
+cd flow-wallet-api
+cp .env.example .env
+```
+
+### 2. Configure for Testnet or Mainnet
+
+Edit `.env` and set these minimum variables:
+
+**For Testnet:**
+```bash
+# Database
+DATABASE_TYPE=sqlite
+DATABASE_DSN=/data/wallet.db
+
+# Flow Network
+ACCESS_API_HOST=access.devnet.nodes.onflow.org:9000
+CHAIN_ID=flow-testnet
+
+# Admin Account (create via https://faucet.flow.com)
+ADMIN_ADDRESS=0xYOUR_TESTNET_ADDRESS
+ADMIN_PRIVATE_KEY=your_private_key_hex
+ENCRYPTION_KEY=your_random_32_char_key
+
+# Tokens (add more as needed)
+ENABLED_TOKENS=FlowToken:0x7e60df042a9c0868:/public/flowTokenReceiver:/public/flowTokenBalance:/storage/flowTokenVault
+
+# Mode
+LIGHTWEIGHT_MODE=true
+DISABLE_IDEMPOTENCY=true
+```
+
+**For Mainnet:**
+```bash
+# Database
+DATABASE_TYPE=sqlite
+DATABASE_DSN=/data/wallet.db
+
+# Flow Network
+ACCESS_API_HOST=access.mainnet.nodes.onflow.org:9000
+CHAIN_ID=flow-mainnet
+
+# Admin Account (use your mainnet account)
+ADMIN_ADDRESS=0xYOUR_MAINNET_ADDRESS
+ADMIN_PRIVATE_KEY=your_private_key_hex
+ENCRYPTION_KEY=your_random_32_char_key
+
+# Tokens (add more as needed)
+ENABLED_TOKENS=FlowToken:0x1654653399040a61:/public/flowTokenReceiver:/public/flowTokenBalance:/storage/flowTokenVault
+
+# Mode
+LIGHTWEIGHT_MODE=true
+DISABLE_IDEMPOTENCY=true
+```
+
+### 3. Start the API
+
+```bash
+docker compose --profile lightweight up -d
+```
+
+### 4. Test it
+
+```bash
+# Create a new account
+curl -X POST http://localhost:3000/v1/accounts
+
+# Check account balance
+curl http://localhost:3000/v1/accounts/0xYOUR_ADDRESS/fungible-tokens/FlowToken
+```
+
+That's it! Your wallet API is now running 🎉
+
+For production deployments with PostgreSQL and Redis, see the [full installation guide](#installation) below.
+
 ## Background
 
 Some application developers may wish to manage Flow accounts in a fully-custodial fashion,
