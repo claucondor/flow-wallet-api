@@ -37,3 +37,13 @@ func (s *Transactions) ExecuteScript() http.Handler {
 	h := http.HandlerFunc(s.ExecuteScriptFunc)
 	return UseJson(h)
 }
+
+func (s *Transactions) PrepareTransaction() http.Handler {
+	h := http.HandlerFunc(s.PrepareTransactionFunc)
+	return UseJson(h)
+}
+
+func (s *Transactions) SubmitTransaction() http.Handler {
+	h := http.HandlerFunc(s.SubmitTransactionFunc)
+	return UseJson(h)
+}

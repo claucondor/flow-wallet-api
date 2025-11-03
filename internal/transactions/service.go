@@ -2,6 +2,7 @@ package transactions
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 
@@ -28,6 +29,9 @@ type Service interface {
 	ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error)
 	UpdateTransaction(t *Transaction) error
 	GetOrCreateTransaction(transactionId string) *Transaction
+	// Non-custodial transaction support
+	PrepareTransaction(ctx context.Context, proposerAddress string, code string, args []Argument) (*PreparedTransaction, error)
+	SubmitTransaction(ctx context.Context, encodedTransaction string) (string, error)
 }
 
 // ServiceImpl defines the API for transaction HTTP handlers.
@@ -341,4 +345,121 @@ func (s *ServiceImpl) sendTransaction(ctx context.Context, tx *Transaction) erro
 	tx.Events = resp.Events
 
 	return nil
+}
+
+// PrepareTransaction builds an unsigned transaction for external signing
+func (s *ServiceImpl) PrepareTransaction(ctx context.Context, proposerAddress string, code string, args []Argument) (*PreparedTransaction, error) {
+	latestBlockID, err := flow_helpers.LatestBlockId(ctx, s.fc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Admin should always be the payer of the transaction fees.
+	payer, err := s.km.AdminAuthorizer(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error while getting admin authorizer for payer: %w", err)
+	}
+
+	// Get proposer account from Flow
+	proposerAddr := flow.HexToAddress(proposerAddress)
+	proposerAccount, err := s.fc.GetAccount(ctx, proposerAddr)
+	if err != nil {
+		return nil, fmt.Errorf("error while getting proposer account: %w", err)
+	}
+
+	// Use first key from the account
+	if len(proposerAccount.Keys) == 0 {
+		return nil, fmt.Errorf("proposer account has no keys")
+	}
+	proposerKey := proposerAccount.Keys[0]
+
+	flowTx := flow.NewTransaction()
+	flowTx.
+		SetReferenceBlockID(*latestBlockID).
+		SetProposalKey(proposerAddr, proposerKey.Index, proposerKey.SequenceNumber).
+		SetPayer(payer.Address).
+		SetGasLimit(maxGasLimit).
+		SetScript([]byte(code))
+
+	for _, arg := range args {
+		cv, err := ArgAsCadence(arg)
+		if err != nil {
+			return nil, err
+		}
+
+		err = flowTx.AddArgument(cv)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Add authorizers. Proposer is the sole authorizer
+	flowTx.AddAuthorizer(proposerAddr)
+
+	// DO NOT sign envelope here - envelope must be signed AFTER payload signatures
+	// The user will sign the payload first, then we sign envelope in SubmitTransaction
+
+	// Encode transaction (unsigned)
+	encoded := fmt.Sprintf("%x", flowTx.Encode())
+
+	// Get signing message (what the user needs to sign)
+	// For payload signing, we need to encode the payload part
+	signingMessage := fmt.Sprintf("%x", flowTx.PayloadMessage())
+
+	// Build authorizers list
+	authorizers := make([]string, len(flowTx.Authorizers))
+	for i, auth := range flowTx.Authorizers {
+		authorizers[i] = auth.Hex()
+	}
+
+	return &PreparedTransaction{
+		Transaction:    flowTx,
+		EncodedTx:      encoded,
+		CadenceCode:    code,
+		ReferenceBlock: latestBlockID.Hex(),
+		ProposalKey: ProposalKeyJSON{
+			Address:        proposerAddr.Hex(),
+			KeyIndex:       proposerKey.Index,
+			SequenceNumber: proposerKey.SequenceNumber,
+		},
+		Payer:          payer.Address.Hex(),
+		Authorizers:    authorizers,
+		Arguments:      flowTx.Arguments,
+		GasLimit:       flowTx.GasLimit,
+		SigningMessage: signingMessage,
+	}, nil
+}
+
+// SubmitTransaction submits a signed transaction to the Flow blockchain
+func (s *ServiceImpl) SubmitTransaction(ctx context.Context, encodedTransaction string) (string, error) {
+	// Decode hex string to bytes
+	txBytes, err := hex.DecodeString(encodedTransaction)
+	if err != nil {
+		return "", fmt.Errorf("error decoding hex transaction: %w", err)
+	}
+
+	// Decode bytes to transaction
+	flowTx, err := flow.DecodeTransaction(txBytes)
+	if err != nil {
+		return "", fmt.Errorf("error parsing transaction: %w", err)
+	}
+
+	// Admin signs the envelope (payer) AFTER user has signed payload
+	payer, err := s.km.AdminAuthorizer(ctx)
+	if err != nil {
+		return "", fmt.Errorf("error while getting admin authorizer for payer: %w", err)
+	}
+
+	// Sign envelope
+	if err := flowTx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
+		return "", fmt.Errorf("error signing envelope: %w", err)
+	}
+
+	// Submit to Flow
+	err = s.fc.SendTransaction(ctx, *flowTx)
+	if err != nil {
+		return "", fmt.Errorf("error sending transaction: %w", err)
+	}
+
+	return flowTx.ID().Hex(), nil
 }

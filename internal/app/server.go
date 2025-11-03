@@ -223,6 +223,10 @@ func (s *Server) initHTTPServer() {
 	rv.Handle("/watchlist/accounts", accountHandler.AddNonCustodialAccount()).Methods(http.MethodPost)
 	rv.Handle("/watchlist/accounts/{address}", accountHandler.DeleteNonCustodialAccount()).Methods(http.MethodDelete)
 
+	// Non-custodial transaction support
+	rv.Handle("/accounts/{address}/transactions/prepare", transactionHandler.PrepareTransaction()).Methods(http.MethodPost)
+	rv.Handle("/transactions/submit", transactionHandler.SubmitTransaction()).Methods(http.MethodPost)
+
 	// Scripts
 	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost)
 

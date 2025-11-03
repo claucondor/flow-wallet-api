@@ -200,3 +200,75 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 
 	handleJsonResponse(rw, http.StatusOK, res)
 }
+
+func (s *Transactions) PrepareTransactionFunc(rw http.ResponseWriter, r *http.Request) {
+	err := checkNonEmptyBody(r)
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	vars := mux.Vars(r)
+	proposerAddress, ok := vars["address"]
+	if !ok {
+		err = &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("missing address parameter"),
+		}
+		handleError(rw, r, err)
+		return
+	}
+
+	var txReq transactions.PrepareTransactionRequest
+
+	err = json.NewDecoder(r.Body).Decode(&txReq)
+	if err != nil {
+		err = &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("invalid body: %#v", err),
+		}
+		handleError(rw, r, err)
+		return
+	}
+
+	preparedTx, err := s.service.PrepareTransaction(r.Context(), proposerAddress, txReq.Code, txReq.Arguments)
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, preparedTx)
+}
+
+func (s *Transactions) SubmitTransactionFunc(rw http.ResponseWriter, r *http.Request) {
+	err := checkNonEmptyBody(r)
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	var txReq transactions.SubmitTransactionRequest
+
+	err = json.NewDecoder(r.Body).Decode(&txReq)
+	if err != nil {
+		err = &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("invalid body: %#v", err),
+		}
+		handleError(rw, r, err)
+		return
+	}
+
+	txId, err := s.service.SubmitTransaction(r.Context(), txReq.EncodedTransaction)
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	resp := transactions.SubmitTransactionResponse{
+		TransactionId: txId,
+		Status:        "PENDING",
+	}
+
+	handleJsonResponse(rw, http.StatusCreated, resp)
+}

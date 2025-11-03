@@ -120,3 +120,34 @@ func (t Transaction) ToJSONResponse() JSONResponse {
 		UpdatedAt:       t.UpdatedAt,
 	}
 }
+
+// PreparedTransaction represents a transaction ready to be signed externally
+type PreparedTransaction struct {
+	Transaction     *flow.Transaction `json:"-"`
+	EncodedTx       string            `json:"encodedTransaction"` // Hex encoded unsigned transaction
+	CadenceCode     string            `json:"cadence"`            // Human readable Cadence code
+	ReferenceBlock  string            `json:"referenceBlockId"`
+	ProposalKey     ProposalKeyJSON   `json:"proposalKey"`
+	Payer           string            `json:"payer"`
+	Authorizers     []string          `json:"authorizers"`
+	Arguments       [][]byte          `json:"arguments"`
+	GasLimit        uint64            `json:"gasLimit"`
+	SigningMessage  string            `json:"signingMessage"` // Message hash that needs to be signed
+}
+
+// PrepareTransactionRequest is the HTTP request for preparing a transaction
+type PrepareTransactionRequest struct {
+	Code      string     `json:"code"`
+	Arguments []Argument `json:"arguments"`
+}
+
+// SubmitTransactionRequest is the HTTP request for submitting a signed transaction
+type SubmitTransactionRequest struct {
+	EncodedTransaction string `json:"encodedTransaction"` // Hex encoded signed transaction
+}
+
+// SubmitTransactionResponse is the HTTP response for submitting a transaction
+type SubmitTransactionResponse struct {
+	TransactionId string `json:"transactionId"`
+	Status        string `json:"status"`
+}
