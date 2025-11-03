@@ -156,9 +156,6 @@ services:
       - wallet_data:/data
     networks:
       - private
-    depends_on:
-      emulator:
-        condition: service_started
     restart: unless-stopped
 
   # ==========================================================================
