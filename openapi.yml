@@ -1205,37 +1205,51 @@ components:
           example: <cadence script code for token balance>
     fungibleTokenEnable:
       type: object
+      required:
+        - name
+        - address
+        - type
       properties:
         name:
           type: string
+          description: Token contract name
           example: FUSD
         nameLowerCase:
           type: string
           example: fusd
           deprecated: true
+          description: Deprecated. Use receiverPublicPath, balancePublicPath, and vaultStoragePath instead.
         receiverPublicPath:
           type: string
+          description: Public path for the token receiver capability (required if nameLowerCase is not provided)
           example: /public/fusdReceiver
         balancePublicPath:
           type: string
+          description: Public path for the token balance capability (required if nameLowerCase is not provided)
           example: /public/fusdBalance
         vaultStoragePath:
           type: string
+          description: Storage path for the token vault (required if nameLowerCase is not provided)
           example: /storage/fusdVault
         address:
           type: string
+          description: Contract address on the Flow blockchain
           example: '0xf8d6e0586b0a20c7'
         type:
           type: string
+          description: Token type (FT for fungible tokens)
           example: FT
         setup:
           type: string
+          description: 'Optional: Cadence transaction code for token vault setup. If not provided, a generic template will be auto-generated for FT tokens.'
           example: <cadence transaction code for token setup>
         transfer:
           type: string
+          description: 'Optional: Cadence transaction code for token transfer. If not provided, a generic template will be auto-generated for FT tokens.'
           example: <cadence transaction code for token transfer>
         balance:
           type: string
+          description: 'Optional: Cadence script code for token balance query. If not provided, a generic template will be auto-generated for FT tokens.'
           example: <cadence script code for token balance>
     fungibleTokenWithdrawalRequest:
       type: object
