@@ -379,6 +379,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/transactionWithEvents'
+  /transactions/submit:
+    post:
+      summary: Submit a signed transaction
+      description: |-
+        Submits a transaction that was prepared via /accounts/{address}/transactions/prepare and signed externally.
+        The API will sign as the payer and submit the transaction to the Flow network.
+      operationId: submitSignedTransaction
+      tags:
+        - Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/submitTransactionRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/submitTransactionResponse'
   /scripts:
     post:
       summary: Execute a script on chain
@@ -557,6 +578,30 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/job'
                   - $ref: '#/components/schemas/transactionWithEvents'
+  '/accounts/{address}/transactions/prepare':
+    parameters:
+      - $ref: '#/components/parameters/address'
+    post:
+      summary: Prepare a transaction for external signing
+      description: |-
+        Prepares an unsigned transaction that can be signed externally by a non-custodial wallet.
+        The API will act as the payer for transaction fees.
+        Returns the unsigned transaction and the payload that needs to be signed.
+      operationId: prepareTransaction
+      tags:
+        - Account Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/prepareTransactionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/preparedTransaction'
   '/accounts/{address}/transactions/{transactionId}':
     parameters:
       - $ref: '#/components/parameters/address'
@@ -1107,6 +1152,90 @@ components:
         signature:
           type: string
           example: e2beedaf426c414925a7757defa61d1169781f1d84bc713788767efae54c1e275dc353481fc386cf7a961415cf9e749c384fdec35f8af0fc93e20d2da8cc29ef
+    prepareTransactionRequest:
+      type: object
+      required:
+        - code
+        - arguments
+      properties:
+        code:
+          type: string
+          description: Cadence transaction code
+          example: 'import FungibleToken from 0x9a0766d93b6608b7\nimport FlowToken from 0x7e60df042a9c0868\n\ntransaction(amount: UFix64, recipient: Address) { ... }'
+        arguments:
+          type: array
+          description: Transaction arguments
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: UFix64
+              value:
+                type: string
+                example: '1.0'
+    preparedTransaction:
+      type: object
+      properties:
+        encodedTransaction:
+          type: string
+          description: Hex-encoded unsigned transaction
+          example: f903e8f903e3b90345696d706f72742046756e6769626c65...
+        cadence:
+          type: string
+          description: Human-readable Cadence code
+          example: 'import FungibleToken from 0x9a0766d93b6608b7...'
+        referenceBlockId:
+          type: string
+          example: a672aabaf1b5982a29df89bc4640c6c91fc9d42a7304e6e3b185dd05c324b9c9
+        proposalKey:
+          type: object
+          properties:
+            address:
+              type: string
+              example: 543abeb960b32148
+            keyIndex:
+              type: integer
+              example: 0
+            sequenceNumber:
+              type: integer
+              example: 1
+        payer:
+          type: string
+          description: Admin account that will pay transaction fees
+          example: 45314e606cd2bd1f
+        authorizers:
+          type: array
+          items:
+            type: string
+            example: 543abeb960b32148
+        gasLimit:
+          type: integer
+          example: 9999
+        signingMessage:
+          type: string
+          description: Hex-encoded message that needs to be signed by the proposer
+          example: f903e3b90345696d706f72742046756e6769626c65...
+    submitTransactionRequest:
+      type: object
+      required:
+        - encodedTransaction
+      properties:
+        encodedTransaction:
+          type: string
+          description: Hex-encoded transaction with user's payload signature
+          example: f9042ff903e3b90345696d706f72742046756e6769626c65...
+    submitTransactionResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          description: Flow transaction ID
+          example: e18b5aa1cee566953c6d7000ace2bd359428d20291d97c6ae195eaea0f976eff
+        status:
+          type: string
+          description: Transaction status
+          example: PENDING
     job:
       type: object
       properties:
