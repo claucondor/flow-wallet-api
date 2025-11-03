@@ -41,11 +41,13 @@ transaction {
         panic("vault exists")
     }
 
-    var vault: @TOKEN_DECLARATION_NAME.Vault? = nil
-    if let f = TOKEN_DECLARATION_NAME.createEmptyVault as? fun(): @TOKEN_DECLARATION_NAME.Vault {
-        vault <- f()
-    } else if let f = TOKEN_DECLARATION_NAME.createEmptyVault as? fun(allowUnrestrictedFlow: Bool): @TOKEN_DECLARATION_NAME.Vault {
-        vault <- f(allowUnrestrictedFlow: false)
+    var vault: @TOKEN_DECLARATION_NAME.Vault? <- nil
+    if let f = TOKEN_DECLARATION_NAME.createEmptyVault as? fun(Type): @{FungibleToken.Vault} {
+        vault <-! f(Type<@TOKEN_DECLARATION_NAME.Vault>()) as! @TOKEN_DECLARATION_NAME.Vault
+    } else if let f = TOKEN_DECLARATION_NAME.createEmptyVault as? fun(): @TOKEN_DECLARATION_NAME.Vault {
+        vault <-! f()
+    } else if let f = TOKEN_DECLARATION_NAME.createEmptyVault as? fun(Bool): @TOKEN_DECLARATION_NAME.Vault {
+        vault <-! f(false)
     } else {
         panic("Could not determine the correct function signature for createEmptyVault")
     }
