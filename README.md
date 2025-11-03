@@ -17,8 +17,6 @@ This service can be used by applications that need to manage Flow user accounts 
 - _Transfer NFTs (coming soon)_
 - _Detect NFT deposits (coming soon)_
 
-View full list of functionality in the [API documentation](https://flow-hydraulics.github.io/flow-wallet-api/).
-
 ## Quick Start
 
 Get up and running in 5 minutes with lightweight mode (no PostgreSQL, no Redis required):
@@ -118,10 +116,6 @@ rather than a hosted 3rd-party solution.
 - **Exchange** — a cryptocurrency exchange that is listing FLOW and/or FUSD. Similar to the case above, one or more admin accounts may be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
 - **Web Wallet** — a user-facing wallet application that is compatible with Flow dapps. Each user account would be created and managed by the wallet service.
 
-## API Specification
-
-View the [Wallet API documentation and OpenAPI (Swagger) specification](https://flow-hydraulics.github.io/flow-wallet-api/).
-
 ## Installation
 
 The Wallet API is provided as a Docker image:
@@ -215,7 +209,7 @@ If you have an existing `.env` file (or you were using `-envfile`) you can run a
 
 ### Maintenance mode
 
-You can put the service in maintenance mode via the [System API](https://flow-hydraulics.github.io/flow-wallet-api/#tag/System) by sending the following JSON body as a `POST` request to `/system/settings` (example in [api-test-scripts/system.http](api-test-scripts/system.http)):
+You can put the service in maintenance mode by sending the following JSON body as a `POST` request to `/system/settings` (example in [api-test-scripts/system.http](api-test-scripts/system.http)):
 
 ```json
 {
