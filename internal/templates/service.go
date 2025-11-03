@@ -110,6 +110,30 @@ func (s *ServiceImpl) AddToken(t *Token) error {
 		return fmt.Errorf(`not a valid name: "%s"`, t.Name)
 	}
 
+	// Auto-generate generic templates if not provided (for FT tokens)
+	if t.Type == FT {
+		if t.Setup == "" {
+			t.Setup, err = FungibleSetupCode(s.cfg.ChainID, t)
+			if err != nil {
+				return err
+			}
+		}
+
+		if t.Transfer == "" {
+			t.Transfer, err = FungibleTransferCode(s.cfg.ChainID, t)
+			if err != nil {
+				return err
+			}
+		}
+
+		if t.Balance == "" {
+			t.Balance, err = FungibleBalanceCode(s.cfg.ChainID, t)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	// Received code templates may have values that need replacing
 	t.Setup, err = TokenCode(s.cfg.ChainID, t, t.Setup)
 	if err != nil {
