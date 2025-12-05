@@ -45,7 +45,18 @@ func (h *ChainEventHandler) handleDeposit(ctx context.Context, event flow.Event)
 	}
 	accountAddress := event.Value.SearchFieldByName("to")
 
-	// DEBUG: Log ALL deposit events
+	if amountOrNftID == nil || accountAddress == nil {
+		return
+	}
+
+	// Get the target account from database
+	account, err := h.AccountService.Details(flow_helpers.HexString(accountAddress.String()))
+	if err != nil {
+		// Account not in our database, ignore silently (it's not our account)
+		return
+	}
+
+	// Log only deposits to OUR accounts
 	log.
 		WithFields(log.Fields{
 			"event":   event.Type,
@@ -53,25 +64,7 @@ func (h *ChainEventHandler) handleDeposit(ctx context.Context, event flow.Event)
 			"amount":  amountOrNftID,
 			"txId":    event.TransactionID,
 		}).
-		Info("Deposit event detected")
-
-	if amountOrNftID == nil || accountAddress == nil {
-		log.WithField("event", event.Type).Warn("Could not find required fields in event")
-		return
-	}
-
-	// Get the target account from database
-	account, err := h.AccountService.Details(flow_helpers.HexString(accountAddress.String()))
-	if err != nil {
-		log.
-			WithFields(log.Fields{
-				"error":   err,
-				"address": accountAddress,
-				"event":   event.Type,
-			}).
-			Warn("Could not get account for deposit event")
-		return
-	}
+		Info("Deposit detected for managed account")
 
 	if err = h.TokenService.RegisterDeposit(ctx, token, event.TransactionID, account, amountOrNftID.String()); err != nil {
 		log.
