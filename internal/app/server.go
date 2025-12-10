@@ -175,6 +175,10 @@ func (s *Server) initHTTPServer() {
 	// Debug
 	rv.Handle("/debug", handlers.Debug("https://github.com/flow-hydraulics/flow-wallet-api", s.sha1ver, s.buildTime)).Methods(http.MethodGet)
 
+	// Swagger UI and OpenAPI spec
+	rv.HandleFunc("/docs", handlers.HandleSwaggerUI).Methods(http.MethodGet)
+	rv.HandleFunc("/openapi.yml", handlers.HandleOpenAPISpec(handlers.OpenAPISpec)).Methods(http.MethodGet)
+
 	// Health
 	rv.HandleFunc("/health/ready", handlers.HandleHealthReady).Methods(http.MethodGet)
 	rv.Handle("/health/liveness", handlers.Liveness(func() (interface{}, error) {
