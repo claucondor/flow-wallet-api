@@ -6,7 +6,8 @@ info:
   contact:
     url: 'https://github.com/orgs/flow-hydraulics/teams/wallet'
 servers:
-  - url: 'http://localhost:3000/v1'
+  - url: '/v1'
+    description: Current server (relative URL)
 tags:
   - name: Debugging
     description: View useful debugging information about the Wallet API.
