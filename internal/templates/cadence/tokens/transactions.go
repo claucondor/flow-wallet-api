@@ -2,7 +2,7 @@ package tokens
 
 // GenericFungibleTransfer transfers fungible tokens between accounts
 const GenericFungibleTransfer = `
-import FungibleToken from 0x9a0766d93b6608b7
+import FungibleToken from "FungibleToken.cdc"
 import TOKEN_DECLARATION_NAME from TOKEN_ADDRESS
 
 transaction(amount: UFix64, recipient: Address) {
@@ -29,7 +29,7 @@ transaction(amount: UFix64, recipient: Address) {
 
 // GenericFungibleSetup sets up a fungible token vault for an account
 const GenericFungibleSetup = `
-import FungibleToken from 0x9a0766d93b6608b7
+import FungibleToken from "FungibleToken.cdc"
 import TOKEN_DECLARATION_NAME from TOKEN_ADDRESS
 
 transaction {

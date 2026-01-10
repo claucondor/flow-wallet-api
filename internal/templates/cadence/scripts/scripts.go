@@ -2,7 +2,7 @@ package scripts
 
 // GenericFungibleBalance checks the balance of a fungible token for an account
 const GenericFungibleBalance = `
-import FungibleToken from 0x9a0766d93b6608b7
+import FungibleToken from "FungibleToken.cdc"
 import TOKEN_DECLARATION_NAME from TOKEN_ADDRESS
 
 access(all)
